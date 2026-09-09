@@ -1,6 +1,6 @@
 # V I B E — пошаговый запуск на Cloudflare
 
-Эта версия уже привязана к:
+Эта версия уже привязана к: 
 
 - Supabase: `https://oqjtaukwtzvhygdikdcd.supabase.co`
 - Telegram: `@vibeminsk_bot`
