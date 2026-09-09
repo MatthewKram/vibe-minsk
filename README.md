@@ -1,31 +1,51 @@
-# V I B E V13 — Minsk / Cloudflare
+# V I B E V15
 
-V13 заменяет Яндекс Карты на собственный экран карты V I B E на базе MapLibre GL JS и данных OpenStreetMap.
+Telegram Mini App для поиска событий и компаний в Минске.
 
-## Что изменилось
+## Стек
 
-- MapLibre GL JS вместо Яндекс Карт;
-- ключ карты больше не нужен;
-- собственная тёмная стилизация карты;
-- точки событий по категориям;
-- кластеры событий;
-- heat/pulse-слой активности;
-- фильтры «Сейчас / Сегодня / Домашние / Бесплатно»;
-- геолокация пользователя только в пределах Минска;
-- bottom-sheet выбранного события;
-- переход из списка к точке на карте;
-- сохранена вся текущая Cloudflare/Supabase логика.
+Frontend: Vue 3 + TypeScript + Vite + Vue Router + Pinia + TanStack Vue Query + Zod + MapLibre.
 
-## Карта
+Backend: Cloudflare Workers + Hono + TypeScript + Zod.
 
-Рендер: MapLibre GL JS.
-Базовые картографические данные: OpenStreetMap через keyless OpenFreeMap/OpenMapTiles style.
-Атрибуция отображается прямо на карте.
+Data: Supabase PostgreSQL + Storage.
 
-Для первого запуска не нужен API key и не нужно добавлять новые Cloudflare Variables.
+## Команды
 
-## Деплой
+```bash
+npm install
+npm run dev
+npm run typecheck
+npm run build
+npm run deploy
+```
 
-Если V12 уже работает, используйте `vibe-minsk-cloudflare-v13-patch.zip` и замените перечисленные в `V13-UPGRADE-RU.md` файлы.
+## Production settings
 
-Supabase, SQL, BotFather, Worker URL и существующие Secrets менять не нужно.
+Публичные значения уже настроены в `wrangler.jsonc`:
+
+- Supabase URL: `https://oqjtaukwtzvhygdikdcd.supabase.co`
+- Telegram bot: `@vibeminsk_bot`
+- Mini App short name: `app`
+- Worker URL: `https://vibe-minsk.mamazaxist9797.workers.dev`
+
+Secrets остаются только в Cloudflare Dashboard:
+
+- `SUPABASE_SECRET_KEY`
+- `TELEGRAM_BOT_TOKEN`
+
+## Совместимость
+
+V15 использует существующую схему Supabase V14.1. SQL-миграция не требуется.
+
+Старый монолитный `POST /api { action: ... }` частично сохранён как переходный compatibility endpoint. Новый Vue frontend использует REST API `/api/...`.
+
+
+## Cloudflare Git build
+
+Для подключённого GitHub репозитория:
+
+- Build command: `npm run build`
+- Deploy command: `npx wrangler deploy`
+
+Для ручного CLI deploy: `npm run deploy`.

@@ -1,0 +1,10 @@
+import { z } from 'zod';
+export const eventKind=z.enum(['party','home','bar','music','games','social','spontaneous']);
+export const createEventSchema=z.object({title:z.string().min(3).max(90),description:z.string().min(10).max(3000),kind:eventKind,emoji:z.string().max(8).default('✨'),vibe:z.string().max(30).default('НОВОЕ'),district:z.string().min(1).max(80),publicLocation:z.string().max(160),privateAddress:z.string().max(300).optional().default(''),lat:z.number(),lng:z.number(),startAt:z.string(),endAt:z.string().nullable().optional(),price:z.number().nonnegative().default(0),capacity:z.number().int().min(2).max(5000),age:z.string().max(30).default('18+'),tags:z.array(z.string().max(40)).max(8).default([]),schedule:z.array(z.unknown()).max(20).default([]),requiresApproval:z.boolean().default(true)});
+export const updateEventSchema=createEventSchema.partial();
+export const joinSchema=z.object({note:z.string().max(500).default('')});
+export const resolveSchema=z.object({decision:z.enum(['accepted','declined'])});
+export const messageSchema=z.object({text:z.string().min(1).max(2000)});
+export const profileSchema=z.object({name:z.string().min(1).max(80),bio:z.string().max(500),birthDate:z.string().nullable().optional()});
+export const statusSchema=z.object({status:z.enum(['published','hidden','cancelled'])});
+export const reportSchema=z.object({reason:z.string().min(1).max(160),details:z.string().max(1000).optional(),eventId:z.string().optional(),userId:z.string().optional()});

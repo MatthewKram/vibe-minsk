@@ -1,0 +1,5 @@
+import { createRouter, createWebHistory } from 'vue-router';
+import HomePage from '@/pages/HomePage.vue';import MapPage from '@/pages/MapPage.vue';import EventPage from '@/pages/EventPage.vue';import CreateEventPage from '@/pages/CreateEventPage.vue';import InboxPage from '@/pages/InboxPage.vue';import RequestPage from '@/pages/RequestPage.vue';import ChatPage from '@/pages/ChatPage.vue';import ProfilePage from '@/pages/ProfilePage.vue';import MyEventsPage from '@/pages/MyEventsPage.vue';import ManageEventPage from '@/pages/ManageEventPage.vue';
+export default createRouter({history:createWebHistory(),routes:[
+ {path:'/',component:HomePage},{path:'/map',component:MapPage},{path:'/event/:id',component:EventPage},{path:'/create',component:CreateEventPage},{path:'/inbox',component:InboxPage},{path:'/request/:id',component:RequestPage},{path:'/chat/:eventId',component:ChatPage},{path:'/profile',component:ProfilePage},{path:'/my-events',component:MyEventsPage},{path:'/manage/:id',component:ManageEventPage}
+]});
