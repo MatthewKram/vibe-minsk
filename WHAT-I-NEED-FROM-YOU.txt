@@ -1,0 +1,19 @@
+V I B E — что ещё потребуется от владельца проекта
+
+УЖЕ ВСТАВЛЕНО В ПРОЕКТ:
+- Supabase URL: https://oqjtaukwtzvhygdikdcd.supabase.co
+- Telegram bot: @vibeminsk_bot
+- Бренд: V I B E
+- Целевой URL: https://vibe-minsk.mamazaxist9797.workers.dev
+- Worker name: vibe-minsk
+
+НУЖНО ТОЛЬКО ДВА СЕКРЕТА, ИХ НЕ НАДО ПРИСЫЛАТЬ В ЧАТ:
+1. SUPABASE_SECRET_KEY — серверный ключ Supabase вида sb_secret_...
+2. TELEGRAM_BOT_TOKEN — токен @vibeminsk_bot от BotFather
+
+ВОЗМОЖНО ПОНАДОБИТСЯ УТОЧНИТЬ ПОСЛЕ ПЕРВОГО DEPLOY:
+3. TELEGRAM_APP_SHORT_NAME. Сейчас в проекте стоит: app
+   Если BotFather назначит другой short name, поменяйте TELEGRAM_APP_SHORT_NAME в wrangler.jsonc.
+4. Фактический workers.dev URL. Ожидается:
+   https://vibe-minsk.mamazaxist9797.workers.dev
+   Если Cloudflare выдаст другой account subdomain, замените APP_URL в wrangler.jsonc на фактический URL.
