@@ -230,9 +230,18 @@ function eventGradient(e) {
   return map[e.kind] || map.social;
 }
 function eventCoverStyle(e) {
-  if (e.coverUrl) return `background-image:linear-gradient(180deg,rgba(6,6,8,.02),rgba(6,6,8,.52)),url('${escapeHtml(e.coverUrl)}');background-size:cover;background-position:center`;
-  const fallback = ['party','home','bar','music','games','social','spontaneous'].includes(e.kind) ? e.kind : 'party';
-  return `background-image:linear-gradient(180deg,rgba(6,6,8,.03),rgba(6,6,8,.2)),url('./assets/covers/${fallback}.svg');background-size:cover;background-position:center`;
+  if (e.coverUrl) return `background-image:linear-gradient(180deg,rgba(5,5,6,.02),rgba(5,5,6,.52)),url('${escapeHtml(e.coverUrl)}');background-size:cover;background-position:center`;
+  const photos = {
+    party:'https://images.unsplash.com/photo-1763651961188-17479f1760e9?auto=format&fit=crop&fm=jpg&q=72&w=1600',
+    home:'https://images.unsplash.com/photo-1671116810339-1b58cf241509?auto=format&fit=crop&fm=jpg&q=72&w=1600',
+    bar:'https://images.unsplash.com/photo-1632089039714-3615e5dbca91?auto=format&fit=crop&fm=jpg&q=72&w=1600',
+    music:'https://images.unsplash.com/photo-1450044804117-534ccd6e6a3a?auto=format&fit=crop&fm=jpg&q=72&w=1600',
+    games:'https://images.unsplash.com/photo-1743623786012-51b0b367d8ab?auto=format&fit=crop&fm=jpg&q=72&w=1600',
+    social:'https://images.unsplash.com/photo-1697906038774-31d5a817fef6?auto=format&fit=crop&fm=jpg&q=72&w=1600',
+    spontaneous:'https://images.unsplash.com/photo-1659657317469-5774e5d98b99?auto=format&fit=crop&fm=jpg&q=72&w=1600'
+  };
+  const url=photos[e.kind]||photos.party;
+  return `background-image:linear-gradient(180deg,rgba(4,4,5,.02),rgba(4,4,5,.08) 46%,rgba(4,4,5,.72)),url('${url}');background-size:cover;background-position:center`;
 }
 
 function minskDateParts(iso) {
@@ -307,9 +316,11 @@ function personNearCard(e, i=0) {
 }
 function attendeeStack(e, limit=4) {
   const count=Math.max(1,Math.min(limit,Number(e.people||1)));
-  const seed=(e.organizer?.name||e.title||'VIBE').split('').reduce((a,c)=>a+c.charCodeAt(0),0);
-  const names=['АЛ','МК','ДС','ЕН','ИР','СВ'];
-  return `<div class="attendee-stack">${Array.from({length:count},(_,i)=>`<span style="--avatar-h:${(seed+i*43)%360}">${i===0&&e.organizer?.avatarUrl?`<img src="${escapeHtml(e.organizer.avatarUrl)}" alt="">`:names[(seed+i)%names.length]}</span>`).join('')}${e.people>count?`<b>+${e.people-count}</b>`:''}</div>`;
+  const portraits=[
+    'https://images.unsplash.com/photo-1697906038774-31d5a817fef6?auto=format&fit=crop&fm=jpg&q=70&w=180',
+    'https://images.unsplash.com/photo-1761126280514-4f3b5ef2aea0?auto=format&fit=crop&fm=jpg&q=70&w=180'
+  ];
+  return `<div class="attendee-stack v11-attendees">${Array.from({length:count},(_,i)=>`<span>${i===0&&e.organizer?.avatarUrl?`<img src="${escapeHtml(e.organizer.avatarUrl)}" alt="">`:`<img src="${portraits[i%portraits.length]}" alt="">`}</span>`).join('')}${e.people>count?`<b>+${e.people-count}</b>`:''}</div>`;
 }
 function urgencyText(e){const spots=Math.max(0,e.capacity-e.people);if(!spots)return'Мест нет';if(spots<=3)return`${spots} ${spots===1?'место':'места'} осталось`;if(spots<=7)return`Осталось ${spots} мест`;return`${e.people} уже идут`;}
 function cityPulseCard(e){
@@ -318,45 +329,56 @@ function cityPulseCard(e){
   return `<button class="v10-pulse-card" data-event="${e.id}"><div class="v10-pulse-photo" style="${eventCoverStyle(e)}"><span>${when}</span></div><div class="v10-pulse-body"><div><small>${escapeHtml(e.district)}</small><b>${escapeHtml(e.title)}</b></div><div class="v10-pulse-foot">${attendeeStack(e,3)}<span>${urgencyText(e)}</span></div></div></button>`;
 }
 function socialCard(e,i=0){
-  const name=e.organizer?.name||['Аня','Макс','Лера','Илья'][i%4];
-  const intent=e.kind==='home'?'Собирает домашний вечер':e.kind==='bar'?'Ищет компанию в бар':e.kind==='music'?'Идёт на музыку':'Ищет людей на вечер';
-  return `<button class="v10-social-card" data-user="${e.organizer?.id||''}"><div class="v10-person-avatar" style="--avatar-h:${(i*83+330)%360}">${e.organizer?.avatarUrl?`<img src="${escapeHtml(e.organizer.avatarUrl)}" alt="">`:initials(name)}</div><div><b>${escapeHtml(name)}</b><span>${escapeHtml(e.district)} · ${intent}</span></div><i></i></button>`;
+  const names=['Лера','Макс','Аня','Илья','Маша'];
+  const ages=[24,26,23,25,22];
+  const name=e.organizer?.name||names[i%names.length];
+  const intent=e.kind==='home'?'Ищу камерную компанию':e.kind==='bar'?'Хочу сегодня в бар':e.kind==='music'?'Ищу компанию на концерт':'Свободен на вечер';
+  const portraits=[
+    'https://images.unsplash.com/photo-1697906038774-31d5a817fef6?auto=format&fit=crop&fm=jpg&q=74&w=500',
+    'https://images.unsplash.com/photo-1761126280514-4f3b5ef2aea0?auto=format&fit=crop&fm=jpg&q=74&w=500'
+  ];
+  const avatar=e.organizer?.avatarUrl||portraits[i%portraits.length];
+  return `<button class="v11-person-card" data-user="${e.organizer?.id||''}"><div class="v11-person-photo"><img src="${escapeHtml(avatar)}" alt=""><i></i></div><div class="v11-person-copy"><b>${escapeHtml(name)}, ${ages[i%ages.length]}</b><span>${escapeHtml(e.district)} · ${eventDistance(e)!=null?`${eventDistance(e).toFixed(1)} км`:'рядом'}</span><p>${escapeHtml(intent)}</p></div>${icon('arrow')}</button>`;
 }
 function homeScreen() {
   const events=filteredEvents();
   const now=Date.now();
-  const live=events.filter(e=>{const d=new Date(e.startAt).getTime()-now;return d>-60*60000&&d<5*3600000}).slice(0,4);
   const feature=events[0];
-  const picks=events.slice(1,6);
-  const lastSpots=events.filter(e=>e.capacity-e.people>0&&e.capacity-e.people<=7).slice(0,5);
-  const peopleSource=events.filter(e=>e.organizer).slice(0,5);
-  const categories=Object.entries(KIND_META).filter(([k])=>k!=='all').slice(0,6);
-  const spots=feature?Math.max(0,feature.capacity-feature.people):0;
-  return `<section class="screen home-v10">${topBar('Минск')}${authBanner()}
-    <section class="v10-heading"><div><span>Сегодня в Минске</span><h1>Что происходит<br><em>прямо сейчас</em></h1></div><button class="v10-random" data-action="random" aria-label="Подобрать событие">${icon('spark')}</button></section>
-    ${feature?`<article class="v10-feature" data-event="${feature.id}"><div class="v10-feature-photo" style="${eventCoverStyle(feature)}"><div class="v10-photo-overlay"></div><div class="v10-feature-top"><span>${kindIcon(feature.kind)} ${escapeHtml(kindLabel(feature.kind))}</span><button class="heart-btn ${feature.favorite?'active':''}" data-favorite="${feature.id}">${icon('heart')}</button></div><div class="v10-feature-copy"><small>${escapeHtml(feature.district)} · ${formatTime(feature.startAt)}</small><h2>${escapeHtml(feature.title)}</h2><div class="v10-feature-meta"><span>${formatPrice(feature.price)}</span><span>${spots?urgencyText(feature):'лист ожидания'}</span></div></div></div><div class="v10-feature-bottom"><div>${attendeeStack(feature,4)}<span>${feature.people} идут</span></div><button data-event="${feature.id}">Открыть ${icon('arrow')}</button></div></article>`:''}
-    <div class="v10-search"><span>${icon('search')}</span><input id="searchInput" value="${escapeHtml(state.query)}" placeholder="Событие, район или настроение"><button data-action="search">Найти</button></div>
-    <div class="time-tabs v10-tabs">${['Сейчас','Сегодня','Завтра','Выходные','Все'].map(x=>`<button class="tab-chip ${state.timeFilter===x?'active':''}" data-time="${x}">${x}</button>`).join('')}</div>
-    ${(live.length||events.length)?`<section class="v10-section">${sectionTitle('Сейчас рядом','город уже в движении')}<div class="v10-pulse-strip">${(live.length?live:events.slice(0,4)).map(cityPulseCard).join('')}</div></section>`:''}
-    <section class="v10-section">${sectionTitle('Выбери настроение','не категория, а сценарий')}<div class="v10-category-strip">${categories.map(([k,[em,label]],i)=>`<button class="v10-category ${state.kindFilter===k?'active':''}" data-kind="${k}"><span>${kindIcon(k)}</span><div><b>${label}</b><small>${state.events.filter(e=>e.kind===k&&e.status==='published').length} вариантов</small></div>${icon('arrow')}</button>`).join('')}</div></section>
-    ${picks.length?`<section class="v10-section">${sectionTitle('На вечер','редакционная подборка')}<div class="v10-picks">${picks.map(eventCard).join('')}</div></section>`:''}
-    ${peopleSource.length?`<section class="v10-section">${sectionTitle('Люди рядом','можно вписаться в компанию')}<div class="v10-social-strip">${peopleSource.map(socialCard).join('')}</div></section>`:''}
-    ${lastSpots.length?`<section class="v10-section">${sectionTitle('Последние места','если хочется решить сейчас')}<div class="v10-last-spots">${lastSpots.map(listCard).join('')}</div></section>`:''}
+  const live=events.filter(e=>{const d=new Date(e.startAt).getTime()-now;return d>-60*60000&&d<5*3600000}).slice(0,4);
+  const close=events.filter(e=>Math.max(0,e.capacity-e.people)>0&&Math.max(0,e.capacity-e.people)<=5).slice(0,5);
+  const people=events.filter(e=>e.organizer).slice(0,5);
+  const districts=['Немига','Зыбицкая','Октябрьская','Верхний город'];
+  return `<section class="screen home-v11">${topBar('Минск')}${authBanner()}
+    <section class="v11-intro"><div><small>СРЕДА · МИНСК</small><h1>Сегодня<br>есть планы.</h1><p>Люди, встречи и места рядом — без бесконечного каталога.</p></div><button class="v11-surprise" data-action="random">${icon('spark')}</button></section>
+    ${feature?`<article class="v11-feature" data-event="${feature.id}"><div class="v11-feature-image" style="${eventCoverStyle(feature)}"><div class="v11-feature-bar"><span class="v11-badge">${kindIcon(feature.kind)} ${escapeHtml(kindLabel(feature.kind))}</span><button class="heart-btn ${feature.favorite?'active':''}" data-favorite="${feature.id}">${icon('heart')}</button></div><div class="v11-feature-copy"><small>${escapeHtml(feature.district)} · ${formatTime(feature.startAt)}</small><h2>${escapeHtml(feature.title)}</h2><p>${escapeHtml((feature.tags||[]).slice(0,3).join(' · ')||feature.desc||'')}</p></div></div><div class="v11-feature-footer"><div>${attendeeStack(feature,4)}<span><b>${feature.people} идут</b><small>${urgencyText(feature)}</small></span></div><button data-event="${feature.id}">Открыть ${icon('arrow')}</button></div></article>`:''}
+    <div class="v11-search"><span>${icon('search')}</span><input id="searchInput" value="${escapeHtml(state.query)}" placeholder="Куда, с кем или какой вайб?"><button data-action="search">${icon('arrow')}</button></div>
+    <div class="v11-tabs">${['Сейчас','Сегодня','Завтра','Выходные','Все'].map(x=>`<button class="${state.timeFilter===x?'active':''}" data-time="${x}">${x}</button>`).join('')}</div>
+    <section class="v11-section"><div class="v11-title"><div><h3>Сейчас рядом</h3><span>город уже в движении</span></div><i></i></div><div class="v11-live-list">${(live.length?live:events.slice(0,3)).map((e,i)=>`<button class="v11-live-row" data-event="${e.id}"><div class="v11-live-img" style="${eventCoverStyle(e)}"><span>LIVE</span></div><div><small>${escapeHtml(e.district)} · ${formatTime(e.startAt)}</small><b>${escapeHtml(e.title)}</b><p>${urgencyText(e)}</p></div><div class="v11-live-people">${attendeeStack(e,2)}</div></button>`).join('')}</div></section>
+    ${people.length?`<section class="v11-section"><div class="v11-title"><div><h3>Люди рядом</h3><span>можно вписаться в компанию</span></div><i></i></div><div class="v11-people-strip">${people.map(socialCard).join('')}</div></section>`:''}
+    <section class="v11-section"><div class="v11-title"><div><h3>Районы сегодня</h3><span>куда тянет город</span></div><i></i></div><div class="v11-districts">${districts.map((d,i)=>`<button data-district="${d}" style="--d-img:url('${['https://images.unsplash.com/photo-1659657317469-5774e5d98b99?auto=format&fit=crop&fm=jpg&q=68&w=800','https://images.unsplash.com/photo-1743623786012-51b0b367d8ab?auto=format&fit=crop&fm=jpg&q=68&w=800'][i%2]}')"><span>${d}</span><small>${state.events.filter(e=>e.district===d&&e.status==='published').length} событий</small></button>`).join('')}</div></section>
+    ${close.length?`<section class="v11-section"><div class="v11-title"><div><h3>Последние места</h3><span>решение на сегодня</span></div><i></i></div><div class="v11-last">${close.map(listCard).join('')}</div></section>`:''}
+    <section class="v11-section"><div class="v11-title"><div><h3>Все события</h3><span>${events.length} вариантов в Минске</span></div><i></i></div><div class="v11-feed">${events.map(eventCard).join('')||empty('','Пока тихо','Попробуйте изменить фильтры.')}</div></section>
   </section>`;
 }
 function eventScreen(id) {
   const e = state.events.find(x=>x.id===id) || state.myEvents.find(x=>x.id===id);
   if (!e) return `<section class="screen">${topBar('событие',true)}${loadingBlock('Открываем событие…')}</section>`;
-  const tags = (e.tags||[]).map(t=>`<span>${escapeHtml(t)}</span>`).join('');
-  const schedule = (e.schedule||[]).map((row,i)=>`<div class="timeline-item"><span>${String(i+1).padStart(2,'0')}</span><div class="timeline-time">${escapeHtml(row[0]||'')}</div><div class="timeline-content"><b>${escapeHtml(row[1]||'')}</b></div></div>`).join('');
   const spots=Math.max(0,e.capacity-e.people); const fill=Math.min(100,Math.round(e.people/Math.max(1,e.capacity)*100));
-  let cta = '';
-  if (e.owner) cta = `<button class="primary-btn glow" data-manage="${e.id}">Управлять событием</button>`;
-  else if (e.member) cta = `<button class="primary-btn glow" data-open-chat-event="${e.id}">${icon('chat')} В чат участников</button><button class="secondary-btn" data-leave-event="${e.id}">Покинуть</button>`;
-  else if (e.requestStatus === 'pending') cta = `<button class="secondary-btn" data-cancel-request="${e.id}">Заявка отправлена · отменить</button>`;
-  else if (e.requestStatus === 'declined') cta = `<button class="primary-btn glow" data-join="${e.id}">Подать заявку снова</button>`;
-  else cta = `<button class="primary-btn glow" data-join="${e.id}">${e.requiresApproval?'Запросить вход':'Я иду'}</button>`;
-  return `<section class="screen detail-v7">${topBar('событие',true)}<div class="detail-poster" style="${eventCoverStyle(e)}"><div class="poster-noise"></div><div class="detail-topbadges"><span class="badge live">${kindIcon(e.kind)} ${escapeHtml(e.vibe||'СЕГОДНЯ')}</span><span class="badge">${escapeHtml(e.district)}</span></div>${e.coverUrl?'':`<div class="detail-signature">${kindIcon(e.kind,'hero-glyph')}<b>${escapeHtml(kindLabel(e.kind)).toUpperCase()}</b></div>`}<div class="detail-poster-bottom"><div><small>${formatDate(e.startAt)}</small><b>${formatTime(e.startAt)}</b></div><div><small>Вход</small><b>${formatPrice(e.price)}</b></div></div></div><div class="detail-body"><div class="detail-title-row"><div><div class="live-kicker"><span></span> ${escapeHtml(e.vibe||'СОБЫТИЕ')}</div><h1>${escapeHtml(e.title)}</h1></div><button class="heart-btn floating ${e.favorite?'active':''}" data-favorite="${e.id}">${icon('heart')}</button></div><p class="lead">${escapeHtml(e.desc)}</p><div class="event-signal"><div><span>${icon('users')}</span><b>${e.people}</b><small>уже идут</small></div><div><span>${icon('ticket')}</span><b>${spots}</b><small>мест осталось</small></div><div><span>${icon('shield')}</span><b>${escapeHtml(e.age)}</b><small>возраст</small></div></div><div class="capacity-line large"><i style="width:${fill}%"></i></div>${e.privateAddress?`<div class="notice private-address"><b>${icon('pin')} Адрес открыт</b><div>${escapeHtml(e.privateAddress)}</div></div>`:`${e.kind==='home'?'<div class="notice safe-card"><b>Приватная локация</b><div>Точный адрес откроется после принятия заявки организатором.</div></div>':''}`}<button class="host-row premium-host" data-user="${e.organizer?.id||''}"><div class="avatar">${e.organizer?.avatarUrl?`<img src="${escapeHtml(e.organizer.avatarUrl)}" alt="">`:initials(e.organizer?.name||'Организатор')}</div><div><small>Организатор</small><b>${escapeHtml(e.organizer?.name||'Организатор')}</b><em>★ ${e.organizer?.rating||5} ${e.organizer?.verified?'· подтверждён':''}</em></div>${icon('arrow')}</button><div class="detail-actions">${cta}<div class="action-pair"><button class="secondary-btn" data-share="${e.id}">${icon('share')} Поделиться</button><button class="secondary-btn" data-favorite="${e.id}">${e.favorite?'Сохранено':'Сохранить'}</button></div></div></div><section class="section">${sectionTitle('Вайб','что ждёт внутри')}<div class="info-pills premium-pills">${tags||'<span>живое общение</span><span>новые люди</span>'}</div></section><section class="section">${sectionTitle('Как пойдёт вечер','ориентир от организатора')}<div class="timeline premium-timeline">${schedule || '<div class="notice">Организатор пока не добавил программу.</div>'}</div></section><section class="section trust-section"><div class="trust-card"><span>${icon('shield')}</span><div><b>Безопасность V I B E</b><p>Скрытые адреса, ручное подтверждение гостей и жалобы встроены в механику сервиса.</p></div></div><button class="danger-link" data-report-event="${e.id}">Пожаловаться на событие</button></section></section>`;
+  const tags=(e.tags||[]).map(t=>`<span>${escapeHtml(t)}</span>`).join('');
+  let cta='';
+  if(e.owner) cta=`<button class="primary-btn" data-manage="${e.id}">Управлять событием</button>`;
+  else if(e.member) cta=`<button class="primary-btn" data-open-chat-event="${e.id}">${icon('chat')} В чат участников</button><button class="secondary-btn" data-leave-event="${e.id}">Покинуть</button>`;
+  else if(e.requestStatus==='pending') cta=`<button class="secondary-btn" data-cancel-request="${e.id}">Заявка отправлена · отменить</button>`;
+  else cta=`<button class="primary-btn" data-join="${e.id}">${e.requiresApproval?'Запросить вход':'Я иду'}</button>`;
+  return `<section class="screen event-v11">${topBar('событие',true)}
+    <div class="v11-detail-cover" style="${eventCoverStyle(e)}"><div class="v11-detail-top"><span>${kindIcon(e.kind)} ${escapeHtml(kindLabel(e.kind))}</span><span>${escapeHtml(e.district)}</span></div><div class="v11-detail-cover-bottom"><div><small>${formatDate(e.startAt)}</small><b>${formatTime(e.startAt)}</b></div><div><small>Вход</small><b>${formatPrice(e.price)}</b></div></div></div>
+    <div class="v11-detail-main"><div class="v11-kicker"><i></i>${urgencyText(e)}</div><div class="v11-detail-heading"><h1>${escapeHtml(e.title)}</h1><button class="heart-btn floating ${e.favorite?'active':''}" data-favorite="${e.id}">${icon('heart')}</button></div><p class="v11-lead">${escapeHtml(e.desc)}</p>
+    <div class="v11-meta-line"><span>${icon('users')} <b>${e.people}</b> идут</span><span>${icon('ticket')} <b>${spots}</b> мест</span><span>${icon('shield')} <b>${escapeHtml(e.age)}</b></span></div><div class="v11-fill"><i style="width:${fill}%"></i></div>
+    <div class="v11-going"><div>${attendeeStack(e,5)}<span><b>Кто уже идёт</b><small>${e.people>1?`${e.people} человек будут здесь`:'первые участники уже здесь'}</small></span></div><button data-open-chat-event="${e.id}">${icon('chat')}</button></div>
+    <button class="v11-host" data-user="${e.organizer?.id||''}"><div class="v11-host-avatar">${e.organizer?.avatarUrl?`<img src="${escapeHtml(e.organizer.avatarUrl)}" alt="">`:`<img src="https://images.unsplash.com/photo-1761126280514-4f3b5ef2aea0?auto=format&fit=crop&fm=jpg&q=72&w=300" alt="">`}</div><div><small>Организатор</small><b>${escapeHtml(e.organizer?.name||'Организатор')} ${e.organizer?.verified?'✓':''}</b><span>★ ${e.organizer?.rating||5} · отвечает быстро</span></div>${icon('arrow')}</button>
+    ${e.privateAddress?`<div class="v11-location"><span>${icon('pin')}</span><div><small>Точный адрес открыт</small><b>${escapeHtml(e.privateAddress)}</b></div></div>`:e.kind==='home'?`<div class="v11-location muted"><span>${icon('shield')}</span><div><small>Приватная локация</small><b>Адрес увидят только принятые гости</b></div></div>`:''}
+    ${tags?`<div class="v11-tags">${tags}</div>`:''}<div class="v11-actions">${cta}<div><button class="secondary-btn" data-share="${e.id}">${icon('share')} Поделиться</button><button class="secondary-btn" data-favorite="${e.id}">${icon('heart')} Сохранить</button></div></div></div>
+  </section>`;
 }
 
 function createScreen() {
@@ -392,7 +414,7 @@ function chatScreen(eventId) {
 }
 function messageBubble(m) {
   const mine = m.sender_id === state.user?.id;
-  return `<div class="message-row ${mine?'mine':''}">${!mine?`<div class="avatar chat-avatar">${m.sender?.avatar_url?`<img src="${escapeHtml(m.sender.avatar_url)}" alt="">`:initials(m.sender?.display_name||'У')}</div>`:''}<div class="message ${mine?'mine':''}">${!mine?`<b>${escapeHtml(m.sender?.display_name||'Участник')}</b>`:''}<div>${escapeHtml(m.text)}</div><footer><small>${formatTime(m.created_at)}${m.edited_at?' · изменено':''}</small>${mine?`<button data-edit-message="${m.id}">изменить</button><button data-delete-message="${m.id}">удалить</button>`:''}</footer></div></div>`;
+  return `<div class="message-row v11-message-row ${mine?'mine':''}">${!mine?`<div class="avatar chat-avatar">${m.sender?.avatar_url?`<img src="${escapeHtml(m.sender.avatar_url)}" alt="">`:initials(m.sender?.display_name||'У')}</div>`:''}<div class="message ${mine?'mine':''}">${!mine?`<b>${escapeHtml(m.sender?.display_name||'Участник')}</b>`:''}<div>${escapeHtml(m.text)}</div><footer><small>${formatTime(m.created_at)}${m.edited_at?' · изменено':''}</small>${mine?`<button data-edit-message="${m.id}">изменить</button><button data-delete-message="${m.id}">удалить</button>`:''}</footer></div></div>`;
 }
 
 function profileScreen() {
