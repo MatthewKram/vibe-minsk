@@ -9,7 +9,7 @@ export default createRouter({
     {path:'/create',component:()=>import('@/pages/CreateEventPage.vue')},
     {path:'/inbox',component:()=>import('@/pages/InboxPage.vue')},
     {path:'/request/:id',component:()=>import('@/pages/RequestPage.vue')},
-    {path:'/chat/:eventId',component:()=>import('@/pages/ChatPage.vue')},
+    {path:'/chat/:eventId',component:()=>import('@/pages/ChatPage.vue'),meta:{nav:false}},
     {path:'/profile',component:()=>import('@/pages/ProfilePage.vue')},
     {path:'/favorites',component:()=>import('@/pages/FavoritesPage.vue')},
     {path:'/notifications',component:()=>import('@/pages/NotificationsPage.vue')},
