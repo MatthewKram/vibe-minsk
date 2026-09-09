@@ -229,7 +229,11 @@ function eventGradient(e) {
   };
   return map[e.kind] || map.social;
 }
-function eventCoverStyle(e) { return e.coverUrl ? `background-image:linear-gradient(180deg,rgba(6,2,12,.05),rgba(7,2,12,.72)),url('${escapeHtml(e.coverUrl)}');background-size:cover;background-position:center` : `background:${eventGradient(e)}`; }
+function eventCoverStyle(e) {
+  if (e.coverUrl) return `background-image:linear-gradient(180deg,rgba(6,6,8,.02),rgba(6,6,8,.52)),url('${escapeHtml(e.coverUrl)}');background-size:cover;background-position:center`;
+  const fallback = ['party','home','bar','music','games','social','spontaneous'].includes(e.kind) ? e.kind : 'party';
+  return `background-image:linear-gradient(180deg,rgba(6,6,8,.03),rgba(6,6,8,.2)),url('./assets/covers/${fallback}.svg');background-size:cover;background-position:center`;
+}
 
 function minskDateParts(iso) {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone:'Europe/Minsk', year:'numeric',month:'2-digit',day:'2-digit',weekday:'short' }).formatToParts(new Date(iso));
@@ -264,7 +268,7 @@ function navItem(tab, iconName, label) { return `<button class="nav-item ${mainT
 function bottomNav() { return `<nav class="bottom-nav">${navItem('home','home','Главная')}${navItem('map','map','Карта')}<button class="nav-create ${mainTab()==='create'?'active':''}" data-nav="create">${icon('plus')}</button>${navItem('inbox','inbox','Заявки')}${navItem('profile','user','Профиль')}</nav>`; }
 function unreadCount() { return state.notifications.filter(n=>!n.read_at).length + state.chats.reduce((a,c)=>a+(c.unread||0),0); }
 function topBar(sub='только Минск', back=false) {
-  return `<div class="topbar top-space"><div class="brand-lockup">${back?`<button class="back-btn" data-back>${icon('back')}<span>Назад</span></button>`:`<button class="brand-core" data-nav="home" aria-label="V I B E"><span class="brand-v">V</span><span class="brand-word">I B E</span><em>MIN<span>SK</span></em></button>`}</div><div class="top-actions">${!back?`<button class="location-chip" data-action="geo">${icon('pin')}<strong>Минск</strong><small>локально</small></button>`:''}<button class="icon-btn top-notify" data-action="notifications">${icon('bell')}${unreadCount()?`<span class="notification-dot">${Math.min(9,unreadCount())}</span>`:''}</button></div></div>`;
+  return `<div class="topbar top-space"><div class="brand-lockup">${back?`<button class="back-btn" data-back>${icon('back')}<span>Назад</span></button>`:`<button class="brand-core" data-nav="home" aria-label="V I B E"><span class="brand-v">V</span><span class="brand-word">I B E</span><em>MINSK</em></button>`}</div><div class="top-actions">${!back?`<button class="location-chip" data-action="geo">${icon('pin')}<strong>Минск</strong><small>локально</small></button>`:''}<button class="icon-btn top-notify" data-action="notifications">${icon('bell')}${unreadCount()?`<span class="notification-dot">${Math.min(9,unreadCount())}</span>`:''}</button></div></div>`;
 }
 function sectionTitle(title, sub='') { return `<div class="section-title"><div><h3>${title}</h3>${sub?`<small>${sub}</small>`:''}</div><span class="section-line"></span></div>`; }
 function authBanner() { return state.authError ? `<div class="notice auth-notice"><b>${state.publicOnly?'Режим просмотра':'Нужна настройка'}</b><div>${escapeHtml(state.authError)}</div></div>` : ''; }
@@ -296,7 +300,7 @@ function homeScreen() {
   const curated=events.slice(0,3);
   const districts = Object.keys(DISTRICTS).slice(0,6);
   return `<section class="screen home-v7">${topBar('Минск')}${authBanner()}
-    <section class="hero-v7"><div class="hero-copy"><div class="live-kicker"><span></span> Минск · прямо сейчас</div><h1>Найди<br><em>свой вечер.</em></h1><p>${escapeHtml(name)}, здесь люди, места и планы, которые происходят рядом сегодня.</p><div class="hero-actions"><button class="primary-btn glow" data-action="random">${icon('spark')} Выбрать за меня</button><button class="round-action" data-nav="map">${icon('map')}</button></div></div><div class="hero-orbit"><div class="orb-ring r1"></div><div class="orb-ring r2"></div><div class="hero-orb"><span>${events.length}</span><small>событий</small></div><div class="orbit-chip c1">СЕГОДНЯ</div><div class="orbit-chip c2">MINSK</div></div></section>
+    <section class="hero-v7"><div class="hero-copy"><div class="live-kicker"><span></span> Сегодня в Минске</div><h1>Куда<br><em>сегодня?</em></h1><p>${escapeHtml(name)}, от камерных встреч до больших ночей — всё, что происходит рядом.</p><div class="hero-actions"><button class="primary-btn glow" data-action="random">${icon('spark')} Выбрать за меня</button><button class="round-action" data-nav="map">${icon('map')}</button></div></div><div class="hero-orbit"><div class="orb-ring r1"></div><div class="orb-ring r2"></div><div class="hero-orb"><span>${events.length}</span><small>событий</small></div><div class="orbit-chip c1">LIVE</div><div class="orbit-chip c2">${events.length} событий</div></div></section>
     <section class="pulse-strip"><div class="pulse-copy"><span class="pulse-dot"></span><div><b>Пульс города</b><small>${live.length?`${live.length} событий в ближайшие часы`:'вечер только начинается'}</small></div></div><div class="pulse-people">${(live.length?live:events).slice(0,4).map(e=>`<span title="${escapeHtml(e.title)}">${e.organizer?.avatarUrl?`<img src="${escapeHtml(e.organizer.avatarUrl)}" alt="">`:initials(e.organizer?.name||e.title)}</span>`).join('')}<b>LIVE</b></div></section>
     <div class="search-v7"><span>${icon('search')}</span><input id="searchInput" value="${escapeHtml(state.query)}" placeholder="Что ищем сегодня?"><button data-action="search">${icon('arrow')}</button></div>
     <div class="time-tabs premium-tabs">${['Сейчас','Сегодня','Завтра','Выходные','Все'].map(x=>`<button class="tab-chip ${state.timeFilter===x?'active':''}" data-time="${x}">${x}</button>`).join('')}</div>
