@@ -214,7 +214,7 @@ async function sendTelegramMessage(chatId, text, eventId = null) {
   try {
     const url = eventDeepLink(eventId);
     const payload = { chat_id: chatId, text, disable_web_page_preview: true };
-    if (url) payload.reply_markup = { inline_keyboard: [[{ text: 'Открыть в ВАЙБ СИТИ', url }]] };
+    if (url) payload.reply_markup = { inline_keyboard: [[{ text: 'Открыть в V I B E', url }]] };
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -377,6 +377,39 @@ async function handleJsonAction(req, client, body) {
     return json({ ok: true, event: await getOneEvent(client, user, data.id) }, 201);
   }
 
+
+  if (action === 'update_event') {
+    const eventId = safeText(body.eventId, 80);
+    const current = await requireEventOwner(client, user, eventId);
+    const patch = {};
+    if (body.title !== undefined) {
+      const title = safeText(body.title, 90);
+      if (title.length < 3) return fail('Название слишком короткое.', 422);
+      patch.title = title;
+    }
+    if (body.description !== undefined) {
+      const description = safeText(body.description, 3000);
+      if (description.length < 10) return fail('Описание слишком короткое.', 422);
+      patch.description = description;
+    }
+    if (body.capacity !== undefined) {
+      const capacity = Math.min(5000, Math.max(2, Number(body.capacity || 0)));
+      const { data: eventRow, error: countError } = await client.from('events').select('participant_count').eq('id', eventId).single();
+      if (countError) throw countError;
+      if (capacity < Number(eventRow.participant_count || 0)) return fail('Вместимость не может быть меньше числа текущих участников.', 409);
+      patch.capacity = capacity;
+    }
+    if (body.price !== undefined) patch.price = Math.max(0, Number(body.price || 0));
+    if (body.age !== undefined) patch.age_label = safeText(body.age, 30) || '18+';
+    if (body.publicLocation !== undefined) patch.public_location = safeText(body.publicLocation, 160) || current.title;
+    if (body.privateAddress !== undefined) patch.private_address = safeText(body.privateAddress, 300) || null;
+    if (body.tags !== undefined && Array.isArray(body.tags)) patch.tags = body.tags.map(x => safeText(x, 40)).filter(Boolean).slice(0, 8);
+    if (!Object.keys(patch).length) return fail('Нет изменений.', 422);
+    const { error } = await client.from('events').update(patch).eq('id', eventId).eq('organizer_id', user.id);
+    if (error) throw error;
+    return json({ ok: true, event: await getOneEvent(client, user, eventId) });
+  }
+
   if (action === 'set_event_status') {
     const eventId = safeText(body.eventId, 80);
     await requireEventOwner(client, user, eventId);
@@ -389,6 +422,10 @@ async function handleJsonAction(req, client, body) {
 
   if (action === 'join_event') {
     const eventId = safeText(body.eventId, 80);
+    const { data: capacityEvent, error: capacityError } = await client.from('events').select('capacity,participant_count,status').eq('id', eventId).single();
+    if (capacityError) throw capacityError;
+    if (capacityEvent.status !== 'published') return fail('Событие сейчас недоступно.', 409);
+    if (capacityEvent.participant_count >= capacityEvent.capacity) return fail('На событии больше нет свободных мест.', 409);
     const { data: rpcRows, error: rpcError } = await client.rpc('submit_event_request', {
       p_event_id: eventId,
       p_user_id: user.id,
@@ -453,9 +490,56 @@ async function handleJsonAction(req, client, body) {
     return json({ ok: true, status: decision });
   }
 
+  if (action === 'event_members') {
+    const eventId = safeText(body.eventId, 80);
+    await requireEventOwner(client, user, eventId);
+    const { data, error } = await client.from('event_members')
+      .select('event_id,user_id,role,joined_at,user:users!event_members_user_id_fkey(id,display_name,username,avatar_url,rating,verified)')
+      .eq('event_id', eventId).order('joined_at', { ascending: true });
+    if (error) throw error;
+    return json({ ok: true, members: data || [] });
+  }
+
+  if (action === 'leave_event') {
+    const eventId = safeText(body.eventId, 80);
+    const { data: event, error: eventError } = await client.from('events')
+      .select('id,title,organizer_id,organizer:users!events_organizer_id_fkey(id,telegram_id)')
+      .eq('id', eventId).single();
+    if (eventError) throw eventError;
+    if (event.organizer_id === user.id) return fail('Организатор не может покинуть собственное событие.', 409);
+    const { data: membership, error: memberError } = await client.from('event_members').select('role').eq('event_id', eventId).eq('user_id', user.id).maybeSingle();
+    if (memberError) throw memberError;
+    if (!membership) return fail('Вы не являетесь участником этого события.', 409);
+    const { error: delError } = await client.from('event_members').delete().eq('event_id', eventId).eq('user_id', user.id);
+    if (delError) throw delError;
+    await client.from('event_requests').update({ status: 'cancelled' }).eq('event_id', eventId).eq('user_id', user.id);
+    await notify(client, { userId: event.organizer_id, actorId: user.id, eventId, type: 'member_left', title: 'Участник вышел', body: `${user.display_name} больше не идёт на «${event.title}».`, telegramId: event.organizer?.telegram_id });
+    return json({ ok: true });
+  }
+
+  if (action === 'remove_member') {
+    const eventId = safeText(body.eventId, 80);
+    const memberUserId = safeText(body.userId, 80);
+    const event = await requireEventOwner(client, user, eventId);
+    if (memberUserId === user.id) return fail('Нельзя удалить организатора.', 409);
+    const { data: target, error: targetError } = await client.from('users').select('id,display_name,telegram_id').eq('id', memberUserId).single();
+    if (targetError) throw targetError;
+    const { error: delError } = await client.from('event_members').delete().eq('event_id', eventId).eq('user_id', memberUserId).neq('role', 'organizer');
+    if (delError) throw delError;
+    await client.from('event_requests').update({ status: 'declined' }).eq('event_id', eventId).eq('user_id', memberUserId);
+    await notify(client, { userId: memberUserId, actorId: user.id, eventId, type: 'member_removed', title: 'Участие отменено', body: `Организатор убрал вас из «${event.title}».`, telegramId: target.telegram_id });
+    return json({ ok: true });
+  }
+
+  if (action === 'read_all_notifications') {
+    const { error } = await client.from('notifications').update({ read_at: new Date().toISOString() }).eq('user_id', user.id).is('read_at', null);
+    if (error) throw error;
+    return json({ ok: true });
+  }
+
   if (action === 'chats') {
     const { data: memberships, error } = await client.from('event_members')
-      .select('event_id,role,event:events!event_members_event_id_fkey(id,title,emoji,district,start_at,status,cover_url)')
+      .select('event_id,role,event:events!event_members_event_id_fkey(id,title,emoji,kind,district,start_at,status,cover_url)')
       .eq('user_id', user.id).order('joined_at', { ascending: false });
     if (error) throw error;
     const ids = (memberships || []).map(m => m.event_id);
@@ -498,6 +582,33 @@ async function handleJsonAction(req, client, body) {
         body: `${user.display_name}: ${text.slice(0, 120)}`, telegramId: member.user?.telegram_id
       })));
     return json({ ok: true, message }, 201);
+  }
+
+
+  if (action === 'edit_message') {
+    const messageId = safeText(body.messageId, 80);
+    const text = safeText(body.text, 2000);
+    if (!text) return fail('Сообщение пустое.', 422);
+    const { data: message, error: findError } = await client.from('messages').select('id,event_id,sender_id,created_at').eq('id', messageId).single();
+    if (findError) throw findError;
+    if (message.sender_id !== user.id) return fail('Можно редактировать только свои сообщения.', 403);
+    await requireMember(client, user, message.event_id);
+    const ageMs = Date.now() - new Date(message.created_at).getTime();
+    if (ageMs > 24 * 60 * 60 * 1000) return fail('Сообщение можно изменить только в течение 24 часов.', 409);
+    const { error } = await client.from('messages').update({ text, edited_at: new Date().toISOString() }).eq('id', messageId).eq('sender_id', user.id);
+    if (error) throw error;
+    return json({ ok: true });
+  }
+
+  if (action === 'delete_message') {
+    const messageId = safeText(body.messageId, 80);
+    const { data: message, error: findError } = await client.from('messages').select('id,event_id,sender_id').eq('id', messageId).single();
+    if (findError) throw findError;
+    if (message.sender_id !== user.id) return fail('Можно удалять только свои сообщения.', 403);
+    await requireMember(client, user, message.event_id);
+    const { error } = await client.from('messages').delete().eq('id', messageId).eq('sender_id', user.id);
+    if (error) throw error;
+    return json({ ok: true });
   }
 
   if (action === 'favorites') {
