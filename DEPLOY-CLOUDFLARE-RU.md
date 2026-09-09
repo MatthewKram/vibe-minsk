@@ -2,7 +2,7 @@
 
 Эта версия уже привязана к: 
 
-- Supabase: `https://oqjtaukwtzvhygdikdcd.supabase.co`
+- Supabase: `https://oqjtaukwtzvhygdikdcd.supabase.co` 
 - Telegram: `@vibeminsk_bot`
 - Worker name: `vibe-minsk`
 - ожидаемый адрес: `https://vibe-minsk.mamazaxist9797.workers.dev`
