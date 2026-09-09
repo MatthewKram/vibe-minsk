@@ -1,26 +1,20 @@
-# V I B E V15 — архитектура
+# V I B E V17 Architecture
 
-## Frontend
+## Client
+Vue 3 + TypeScript + Vite + Pinia + Vue Router + TanStack Vue Query + Zod.
 
-- `src/pages/` — экраны Mini App.
-- `src/components/` — переиспользуемые UI/event/chat/map компоненты.
-- `src/stores/` — Pinia: только клиентское состояние и оркестрация.
-- `src/services/api.ts` — единая HTTP-точка входа.
-- `src/schemas/` — Zod-проверка ответов API.
-- `src/types/` — доменные TypeScript-типы.
-- `src/services/telegram.ts` — Telegram WebApp SDK изолирован от UI.
-- TanStack Vue Query используется для кэшируемых серверных запросов на ключевых страницах.
+Страницы загружаются lazy imports. MapLibre находится только в map chunk. UI разделён на pages/components/services/stores. Network-loading состояния вынесены в Skeleton/EmptyState компоненты.
+
+## Realtime
+Cloudflare Durable Object `RealtimeHub` держит WebSocket соединения. Signal не является source of truth: после сигнала клиент инвалидирует нужный query/store и получает актуальные данные из Worker/Supabase.
+
+## Map
+OpenFreeMap/OpenMapTiles data + MapLibre GL. События передаются одним GeoJSON source с clustering. V17 хранит signature текущего GeoJSON и не вызывает `setData()` при эквивалентных данных. Маркеры используют локально сгенерированные icon images.
 
 ## Backend
+Cloudflare Worker + Hono + Zod + Supabase service connection.
 
-- `worker/index.ts` — Hono router, без бизнес-логики.
-- `worker/lib/` — auth, Supabase, DTO, Telegram notifications, error mapping.
-- `worker/services/events.ts` — события, избранное, участники.
-- `worker/services/requests.ts` — заявки и membership lifecycle.
-- `worker/services/chat.ts` — внутренний чат V I B E. Сообщения не отправляются ботом.
-- `worker/services/users.ts` — профиль, уведомления, жалобы.
-- `worker/schemas/` — Zod validation входных payload.
+Public unauthenticated `/api/events` использует Cloudflare Cache API. Authenticated response никогда не edge-cache-ится из-за пользовательских полей. Mutations инвалидируют публичный кеш.
 
-## Data
-
-Схема Supabase V14.1 совместима. Новая миграция для V15 не нужна.
+## Security
+Telegram `initData` валидируется только на Worker. Supabase secret и Bot token доступны только Worker Secrets. CORS ограничен same-origin/APP_URL; authenticated API responses имеют `no-store`.

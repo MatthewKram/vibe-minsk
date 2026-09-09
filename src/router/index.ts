@@ -1,5 +1,20 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import HomePage from '@/pages/HomePage.vue';import NotificationsPage from '@/pages/NotificationsPage.vue';import MapPage from '@/pages/MapPage.vue';import EventPage from '@/pages/EventPage.vue';import CreateEventPage from '@/pages/CreateEventPage.vue';import InboxPage from '@/pages/InboxPage.vue';import RequestPage from '@/pages/RequestPage.vue';import ChatPage from '@/pages/ChatPage.vue';import ProfilePage from '@/pages/ProfilePage.vue';import MyEventsPage from '@/pages/MyEventsPage.vue';import ManageEventPage from '@/pages/ManageEventPage.vue';
-export default createRouter({history:createWebHistory(),routes:[
- {path:'/',component:HomePage},{path:'/map',component:MapPage},{path:'/event/:id',component:EventPage},{path:'/create',component:CreateEventPage},{path:'/inbox',component:InboxPage},{path:'/request/:id',component:RequestPage},{path:'/chat/:eventId',component:ChatPage},{path:'/profile',component:ProfilePage},{path:'/notifications',component:NotificationsPage},{path:'/my-events',component:MyEventsPage},{path:'/manage/:id',component:ManageEventPage}
-]});
+
+export default createRouter({
+  history:createWebHistory(),
+  routes:[
+    {path:'/',component:()=>import('@/pages/HomePage.vue')},
+    {path:'/map',component:()=>import('@/pages/MapPage.vue')},
+    {path:'/event/:id',component:()=>import('@/pages/EventPage.vue')},
+    {path:'/create',component:()=>import('@/pages/CreateEventPage.vue')},
+    {path:'/inbox',component:()=>import('@/pages/InboxPage.vue')},
+    {path:'/request/:id',component:()=>import('@/pages/RequestPage.vue')},
+    {path:'/chat/:eventId',component:()=>import('@/pages/ChatPage.vue')},
+    {path:'/profile',component:()=>import('@/pages/ProfilePage.vue')},
+    {path:'/favorites',component:()=>import('@/pages/FavoritesPage.vue')},
+    {path:'/notifications',component:()=>import('@/pages/NotificationsPage.vue')},
+    {path:'/my-events',component:()=>import('@/pages/MyEventsPage.vue')},
+    {path:'/manage/:id',component:()=>import('@/pages/ManageEventPage.vue')}
+  ],
+  scrollBehavior(){return {top:0,behavior:'smooth'};}
+});

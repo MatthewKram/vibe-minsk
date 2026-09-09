@@ -28,3 +28,5 @@
 .sheet-enter-active,.sheet-leave-active{transition:.18s ease}.sheet-enter-from,.sheet-leave-to{transform:translateY(16px);opacity:0}
 @media(max-width:420px){.people-grid{grid-template-columns:1fr}.event-media-native{height:176px}.detail-cover-native{height:198px}.detail-native-body h1{font-size:24px}.form-grid{grid-template-columns:1fr}.map-sheet{grid-template-columns:66px 1fr}.map-sheet-cover{min-height:78px}}
 @media(max-width:360px){:root{--page-pad:10px;--nav-h:56px}.event-media-native{height:164px}.home-heading h1{font-size:27px}.detail-cover-native{height:186px}}
+
+.favorites-list{gap:10px}.map-page .bottom-sheet .tags-native{margin:8px 0}.map-page .bottom-sheet .primary{min-height:38px;font-size:9px}.map-page .bottom-sheet .sheet-close{position:absolute;right:8px;top:27px;width:28px;height:28px;border-radius:10px;border:1px solid var(--line);background:rgba(10,10,12,.72);color:var(--text)}

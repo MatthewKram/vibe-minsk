@@ -5,7 +5,7 @@ import { eventCover } from '@/services/covers';
 import Icon from '@/components/ui/Icon.vue';
 import Avatar from '@/components/ui/Avatar.vue';
 
-const props = defineProps<{ event: EventItem }>();
+const props = defineProps<{ event: EventItem; eager?: boolean }>();
 const emit = defineEmits<{ favorite: [id: string] }>();
 const spots = () => Math.max(0, props.event.capacity - props.event.people);
 </script>
@@ -13,7 +13,8 @@ const spots = () => Math.max(0, props.event.capacity - props.event.people);
 <template>
   <article class="event-card event-card-native">
     <RouterLink :to="`/event/${event.id}`" class="event-card-link">
-      <div class="event-media event-media-native" :style="{ backgroundImage: `url('${eventCover(event.kind, event.coverUrl)}')` }">
+      <div class="event-media event-media-native">
+        <img class="event-media-image" :src="eventCover(event.kind, event.coverUrl)" :alt="event.title" :loading="eager ? 'eager' : 'lazy'" :fetchpriority="eager ? 'high' : 'auto'" decoding="async" />
         <span class="kind-pill">{{ event.vibe || event.kind }}</span>
         <button class="heart heart-overlay" @click.prevent.stop="emit('favorite', event.id)" aria-label="В избранное"><Icon name="heart" :class="{ filled: event.favorite }" /></button>
       </div>

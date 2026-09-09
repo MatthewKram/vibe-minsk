@@ -3,6 +3,9 @@ import { computed, watchEffect } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import TopBar from '@/components/ui/TopBar.vue';
 import EventCard from '@/components/event/EventCard.vue';
+import SkeletonEventCard from '@/components/ui/SkeletonEventCard.vue';
+import SkeletonRow from '@/components/ui/SkeletonRow.vue';
+import EmptyState from '@/components/ui/EmptyState.vue';
 import Icon from '@/components/ui/Icon.vue';
 import Avatar from '@/components/ui/Avatar.vue';
 import { api } from '@/services/api';
@@ -11,10 +14,11 @@ import { useEventsStore } from '@/stores/events';
 import { useSessionStore } from '@/stores/session';
 import { eventCover } from '@/services/covers';
 import { formatTime } from '@/services/format';
+import { telegram } from '@/services/telegram';
 
 const store = useEventsStore();
 const session = useSessionStore();
-const q = useQuery({ queryKey: ['events'], queryFn: () => api.getParsed('/api/events', eventsResponseSchema) });
+const q = useQuery({ queryKey: ['events'], queryFn: () => api.getParsed('/api/events', eventsResponseSchema), staleTime: 30_000 });
 watchEffect(() => { if (q.data.value) store.items = q.data.value.events; });
 
 const feature = computed(() => store.filtered[0]);
@@ -22,11 +26,15 @@ const live = computed(() => store.filtered.slice(1, 5));
 const close = computed(() => store.filtered.filter(e => Math.max(0, e.capacity - e.people) <= 5 && e.capacity > e.people).slice(0, 5));
 const people = computed(() => store.items.filter(e => e.organizer).slice(0, 5));
 const moods = [['all', 'Все'], ['party', 'Тусовки'], ['home', 'Домашние'], ['bar', 'Бары'], ['music', 'Музыка']];
+const filteredEmpty=computed(()=>!q.isPending.value && !store.filtered.length);
 
 async function fav(id: string) {
   if (session.publicOnly) return;
+  telegram.haptic('light');
   await store.toggleFavorite(id);
 }
+function setMood(kind:string){telegram.select();store.kind=kind;}
+function resetFilters(){telegram.haptic('light');store.kind='all';store.query='';}
 </script>
 
 <template>
@@ -44,7 +52,7 @@ async function fav(id: string) {
         <h1>Куда идём?</h1>
         <p>{{ store.items.length }} событий и компаний рядом</p>
       </div>
-      <RouterLink to="/map" class="home-map-button" aria-label="Открыть карту"><Icon name="map" :size="18" /></RouterLink>
+      <RouterLink to="/map" class="home-map-button" aria-label="Открыть карту" @click="telegram.haptic('light')"><Icon name="map" :size="18" /></RouterLink>
     </header>
 
     <div class="search search-compact">
@@ -53,51 +61,60 @@ async function fav(id: string) {
     </div>
 
     <div class="quick-filters compact-filter-row">
-      <button v-for="m in moods" :key="m[0]" :class="{ active: store.kind === m[0] }" @click="store.kind = String(m[0])">{{ m[1] }}</button>
+      <button v-for="m in moods" :key="m[0]" :class="{ active: store.kind === m[0] }" @click="setMood(String(m[0]))">{{ m[1] }}</button>
     </div>
 
-    <section v-if="feature" class="feature-section">
-      <div class="section-head section-head-tight">
-        <div><h2>Выбор на вечер</h2><small>самое интересное сейчас</small></div>
-        <RouterLink to="/map">Все на карте</RouterLink>
-      </div>
-      <EventCard :event="feature" @favorite="fav" />
-    </section>
+    <template v-if="q.isPending.value">
+      <section class="feature-section"><SkeletonEventCard /></section>
+      <section class="section section-tight"><div class="section-head section-head-tight"><div><h2>Сейчас рядом</h2><small>загружаем планы города</small></div></div><div class="skeleton-rail"><SkeletonRow v-for="i in 2" :key="i" /></div></section>
+    </template>
 
-    <section v-if="live.length" class="section section-tight">
-      <div class="section-head section-head-tight"><div><h2>Сейчас рядом</h2><small>уже начинается</small></div></div>
-      <div class="h-scroll live-scroll native-rail">
-        <RouterLink v-for="e in live" :key="e.id" :to="`/event/${e.id}`" class="native-mini-card">
-          <div class="native-mini-thumb" :style="{ backgroundImage: `url('${eventCover(e.kind, e.coverUrl)}')` }"></div>
-          <div class="native-mini-copy">
-            <small>{{ e.district }} · {{ formatTime(e.startAt) }}</small>
-            <b>{{ e.title }}</b>
-            <span>{{ e.people }} идут · {{ Math.max(0, e.capacity - e.people) }} мест</span>
-          </div>
-        </RouterLink>
-      </div>
-    </section>
+    <EmptyState v-else-if="filteredEmpty" icon="search" title="Ничего не нашли" text="Попробуйте другой район, настроение или верните все категории." action="Сбросить фильтры" @action="resetFilters" />
 
-    <section v-if="people.length" class="section section-tight">
-      <div class="section-head section-head-tight"><div><h2>Люди рядом</h2><small>уже строят планы</small></div></div>
-      <div class="people-grid">
-        <RouterLink v-for="e in people" :key="e.id" :to="`/event/${e.id}`" class="person-row">
-          <Avatar :name="e.organizer?.name || 'VIBE'" :src="e.organizer?.avatarUrl" size="md" />
-          <div><b>{{ e.organizer?.name }}</b><small>{{ e.district }}</small><span>{{ e.title }}</span></div>
-          <Icon name="arrow" :size="16" />
-        </RouterLink>
-      </div>
-    </section>
+    <template v-else>
+      <section v-if="feature" class="feature-section">
+        <div class="section-head section-head-tight">
+          <div><h2>Выбор на вечер</h2><small>самое интересное сейчас</small></div>
+          <RouterLink to="/map">Все на карте</RouterLink>
+        </div>
+        <EventCard :event="feature" eager @favorite="fav" />
+      </section>
 
-    <section v-if="close.length" class="section section-tight">
-      <div class="section-head section-head-tight"><div><h2>Последние места</h2><small>пока ещё можно успеть</small></div></div>
-      <div class="stack compact-stack">
-        <RouterLink v-for="e in close" :key="e.id" :to="`/event/${e.id}`" class="compact-event-row">
-          <div class="compact-event-thumb" :style="{ backgroundImage: `url('${eventCover(e.kind, e.coverUrl)}')` }"></div>
-          <div><small>{{ e.district }} · {{ formatTime(e.startAt) }}</small><b>{{ e.title }}</b><span>Осталось {{ Math.max(0, e.capacity - e.people) }} мест</span></div>
-          <Icon name="arrow" :size="16" />
-        </RouterLink>
-      </div>
-    </section>
+      <section v-if="live.length" class="section section-tight">
+        <div class="section-head section-head-tight"><div><h2>Сейчас рядом</h2><small>уже начинается</small></div></div>
+        <div class="h-scroll live-scroll native-rail">
+          <RouterLink v-for="e in live" :key="e.id" :to="`/event/${e.id}`" class="native-mini-card" @click="telegram.haptic('light')">
+            <div class="native-mini-thumb"><img :src="eventCover(e.kind,e.coverUrl)" :alt="e.title" loading="lazy" decoding="async"/></div>
+            <div class="native-mini-copy">
+              <small>{{ e.district }} · {{ formatTime(e.startAt) }}</small>
+              <b>{{ e.title }}</b>
+              <span>{{ e.people }} идут · {{ Math.max(0, e.capacity - e.people) }} мест</span>
+            </div>
+          </RouterLink>
+        </div>
+      </section>
+
+      <section v-if="people.length" class="section section-tight">
+        <div class="section-head section-head-tight"><div><h2>Люди рядом</h2><small>уже строят планы</small></div></div>
+        <div class="people-grid">
+          <RouterLink v-for="e in people" :key="e.id" :to="`/event/${e.id}`" class="person-row">
+            <Avatar :name="e.organizer?.name || 'VIBE'" :src="e.organizer?.avatarUrl" size="md" />
+            <div><b>{{ e.organizer?.name }}</b><small>{{ e.district }}</small><span>{{ e.title }}</span></div>
+            <Icon name="arrow" :size="16" />
+          </RouterLink>
+        </div>
+      </section>
+
+      <section v-if="close.length" class="section section-tight">
+        <div class="section-head section-head-tight"><div><h2>Последние места</h2><small>пока ещё можно успеть</small></div></div>
+        <div class="stack compact-stack">
+          <RouterLink v-for="e in close" :key="e.id" :to="`/event/${e.id}`" class="compact-event-row">
+            <div class="compact-event-thumb"><img :src="eventCover(e.kind,e.coverUrl)" :alt="e.title" loading="lazy" decoding="async"/></div>
+            <div><small>{{ e.district }} · {{ formatTime(e.startAt) }}</small><b>{{ e.title }}</b><span>Осталось {{ Math.max(0, e.capacity - e.people) }} мест</span></div>
+            <Icon name="arrow" :size="16" />
+          </RouterLink>
+        </div>
+      </section>
+    </template>
   </section>
 </template>

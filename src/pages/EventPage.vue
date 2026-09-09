@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import TopBar from '@/components/ui/TopBar.vue';
+import SkeletonEventCard from '@/components/ui/SkeletonEventCard.vue';
+import EmptyState from '@/components/ui/EmptyState.vue';
 import Icon from '@/components/ui/Icon.vue';
 import Avatar from '@/components/ui/Avatar.vue';
 import { api } from '@/services/api';
@@ -11,22 +13,27 @@ import { useEventsStore } from '@/stores/events';
 import { useSessionStore } from '@/stores/session';
 import { formatPrice, formatDate } from '@/services/format';
 import { eventCover } from '@/services/covers';
+import { telegram } from '@/services/telegram';
 
 const route = useRoute(), router = useRouter(), events = useEventsStore(), session = useSessionStore(), qc = useQueryClient();
 const id = String(route.params.id);
-const q = useQuery({ queryKey: ['event', id], queryFn: () => api.getParsed(`/api/events/${id}`, eventResponseSchema) });
-const event = computed(() => q.data.value?.event || events.current);
-async function join() { if (session.publicOnly) return alert('Откройте приложение через Telegram.'); const note = prompt('Пару слов организатору:', 'Привет! Хочу присоединиться.'); if (note === null) return; await events.join(id, note); await qc.invalidateQueries({ queryKey: ['event', id] }); }
-async function cancel() { if (confirm('Отменить заявку?')) { await events.cancelRequest(id); await qc.invalidateQueries({ queryKey: ['event', id] }); } }
-async function favorite() { await events.toggleFavorite(id); await qc.invalidateQueries({ queryKey: ['event', id] }); }
+const q = useQuery({ queryKey: ['event', id], queryFn: () => api.getParsed(`/api/events/${id}`, eventResponseSchema), staleTime: 15_000 });
+const event = computed(() => q.data.value?.event || (events.current?.id===id ? events.current : null));
+async function join() { if (session.publicOnly) return alert('Откройте приложение через Telegram.'); const note = prompt('Пару слов организатору:', 'Привет! Хочу присоединиться.'); if (note === null) return; telegram.haptic('medium'); await events.join(id, note); telegram.notify('success'); await qc.invalidateQueries({ queryKey: ['event', id] }); }
+async function cancel() { if (confirm('Отменить заявку?')) { await events.cancelRequest(id); telegram.notify('success'); await qc.invalidateQueries({ queryKey: ['event', id] }); } }
+async function favorite() { telegram.haptic('light'); await events.toggleFavorite(id); await qc.invalidateQueries({ queryKey: ['event', id] }); }
+async function share(){if(!event.value)return;const url=session.config.appLinkBase?`${session.config.appLinkBase}?startapp=${encodeURIComponent(`event_${event.value.id}`)}`:`${location.origin}/event/${event.value.id}`;await telegram.share(url,`${event.value.title} · ${event.value.district} · ${formatDate(event.value.startAt)}`)}
 </script>
 
 <template>
   <section class="screen event-page event-page-native">
     <TopBar back title="Назад" />
-    <div v-if="event" class="event-detail-native">
-      <div class="detail-cover detail-cover-native" :style="{ backgroundImage: `url('${eventCover(event.kind, event.coverUrl)}')` }">
-        <button class="heart floating detail-heart" @click="favorite"><Icon name="heart" /></button>
+    <div v-if="q.isPending.value" class="event-loading"><SkeletonEventCard /></div>
+    <EmptyState v-else-if="q.isError.value || !event" icon="close" title="Событие не открылось" text="Возможно, организатор скрыл его или соединение временно недоступно." action="На главную" @action="router.push('/')" />
+    <div v-else class="event-detail-native">
+      <div class="detail-cover detail-cover-native">
+        <img :src="eventCover(event.kind,event.coverUrl)" :alt="event.title" fetchpriority="high" decoding="async"/>
+        <button class="heart floating detail-heart" @click="favorite"><Icon name="heart" :class="{filled:event.favorite}" /></button>
       </div>
 
       <div class="detail-native-body">
@@ -49,6 +56,10 @@ async function favorite() { await events.toggleFavorite(id); await qc.invalidate
         <div class="tags tags-native"><span v-for="t in event.tags" :key="t">{{ t }}</span></div>
         <div v-if="event.privateAddress" class="private-box private-box-native"><small>Приватная локация</small><b>{{ event.privateAddress }}</b><span>Адрес доступен только участникам.</span></div>
 
+        <div class="event-secondary-actions">
+          <button class="secondary" @click="share"><Icon name="share" :size="16"/>Поделиться</button>
+          <button class="secondary" @click="favorite"><Icon name="heart" :size="16" :class="{filled:event.favorite}"/>{{event.favorite?'Сохранено':'Сохранить'}}</button>
+        </div>
         <div class="event-actions event-actions-native">
           <button v-if="event.owner" class="primary" @click="router.push(`/manage/${event.id}`)">Управлять</button>
           <button v-else-if="event.member" class="primary" @click="router.push(`/chat/${event.id}`)"><Icon name="chat" :size="17" /> В чат</button>
@@ -57,6 +68,5 @@ async function favorite() { await events.toggleFavorite(id); await qc.invalidate
         </div>
       </div>
     </div>
-    <div v-else class="loading">Загружаем событие…</div>
   </section>
 </template>
