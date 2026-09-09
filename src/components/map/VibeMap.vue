@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import maplibregl, { type GeoJSONSource, type Map, type Marker } from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import type { GeoJSONSource, Map, Marker } from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import type { EventItem } from '@/types/domain';
 import { getMinskPosition } from '@/services/geolocation';
+
+maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
 const props=defineProps<{events:EventItem[]}>();const emit=defineEmits<{select:[event:EventItem]}>();const el=ref<HTMLElement|null>(null);let map:Map|null=null;let userMarker:Marker|null=null;
 const colors=['match',['get','kind'],'home','#a77bff','bar','#ff9b55','music','#4dd9ff','games','#8ee08e','social','#ff77bd','spontaneous','#ffe45e','#ff4778'] as any;

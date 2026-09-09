@@ -1,6 +1,6 @@
 {
   "name": "vibe-minsk-cloudflare-v15",
-  "version": "15.0.0",
+  "version": "15.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,12 +8,14 @@
     "build": "vite build",
     "build:client": "vite build",
     "typecheck": "vue-tsc --noEmit && tsc -p tsconfig.worker.json --noEmit",
-    "check": "npm run structure && npm run typecheck && npm run build",
+    "check": "npm run structure && npm run chat:isolation && npm run realtime:check && npm run typecheck && npm run build",
     "deploy": "npm run build && wrangler deploy",
     "cf:login": "wrangler login",
     "secret:supabase": "wrangler secret put SUPABASE_SECRET_KEY",
     "secret:telegram": "wrangler secret put TELEGRAM_BOT_TOKEN",
-    "structure": "node scripts/structure-check.mjs"
+    "structure": "node scripts/structure-check.mjs",
+    "chat:isolation": "node scripts/no-chat-telegram-check.mjs",
+    "realtime:check": "node scripts/realtime-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
