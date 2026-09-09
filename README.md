@@ -1,5 +1,5 @@
-# V I B E V15.4 PATCH
+# V I B E V16 PATCH
 
-Замените папку `src/styles/` файлами из архива и сделайте Commit.
+Распакуйте архив поверх текущего V15.4/V15.3.x репозитория с сохранением структуры каталогов и заменой файлов. Затем сделайте Commit в GitHub — Cloudflare запустит автоматический build/deploy.
 
-Supabase, Cloudflare Secrets и SQL менять не нужно.
+Supabase, SQL, Secrets и BotFather менять не нужно.

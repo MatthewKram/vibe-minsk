@@ -1,34 +1,30 @@
 :root{
-  --bg:#070708;
-  --bg-soft:#0b0b0d;
-  --panel:#101114;
-  --panel-2:#15161a;
-  --panel-3:#1b1c21;
-  --text:#f4f0ea;
-  --text-2:#d5d1cc;
-  --muted:#8e8c93;
-  --muted-2:#68676d;
-  --line:rgba(255,255,255,.078);
-  --line-strong:rgba(255,255,255,.125);
-  --accent:#ff3d71;
-  --accent-soft:rgba(255,61,113,.12);
-  --accent-2:#ff7b9e;
-  --success:#62d8a0;
-  --warning:#ffb95d;
-  --danger:#ff666e;
-
-  /* V15.4 compact scale */
-  --radius-xs:9px;
-  --radius-sm:12px;
-  --radius:16px;
-  --radius-lg:20px;
-  --nav-h:62px;
-  --topbar-h:56px;
+  --bg:#0a0a0b;
+  --bg-elev:#0f1012;
+  --panel:#121316;
+  --panel-2:#17181c;
+  --panel-3:#1d1f24;
+  --text:#f4f2ee;
+  --text-2:#c8c5c1;
+  --muted:#85848b;
+  --muted-2:#626269;
+  --line:rgba(255,255,255,.07);
+  --line-strong:rgba(255,255,255,.11);
+  --accent:#ff496d;
+  --accent-soft:rgba(255,73,109,.12);
+  --success:#5ed69a;
+  --warning:#f4b45f;
+  --danger:#ff6a72;
+  --radius-xs:8px;
+  --radius-sm:11px;
+  --radius:14px;
+  --radius-lg:18px;
+  --nav-h:58px;
+  --topbar-h:50px;
   --safe-bottom:env(safe-area-inset-bottom,0px);
-  --page-max:680px;
+  --page-max:620px;
   --page-pad:12px;
-  --section-gap:24px;
-
+  --section-gap:20px;
   font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   color-scheme:dark;
 }
