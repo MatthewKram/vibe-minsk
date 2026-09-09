@@ -1,13 +1,5 @@
-# Visual credits
+# Credits
 
-V11 uses remote Unsplash imagery as demo/fallback event photography. User-uploaded event covers override these fallbacks.
+Map data © OpenStreetMap contributors. Vector map delivery/style base: OpenFreeMap/OpenMapTiles.
 
-- Minsk outdoor cafe / nightlife — Anton Sidarau — Unsplash
-- Minsk night street — Vitali Adutskevich — Unsplash
-- Minsk night architecture — Slava Taukachou — Unsplash
-- Party/friends — Kwami Fattah Al Sissi — Unsplash
-- Bar/friends — Himanshu Choudhary — Unsplash
-- Concert crowd — Abigail Lynn — Unsplash
-- Night portraits — Alex Sheldon / Nadeem Choudhary — Unsplash
-
-For a public commercial launch, replace fallback demo imagery with your own licensed brand photography or event-host uploads if desired.
+Event fallback photography is loaded from Unsplash demo image URLs. User-uploaded event covers always take priority.

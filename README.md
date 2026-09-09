@@ -1,51 +1,16 @@
-# V I B E V15
+# V I B E — Minsk Telegram Mini App · V15.3
 
-Telegram Mini App для поиска событий и компаний в Минске.
+Production-oriented Telegram Mini App for local events in Minsk.
 
-## Стек
+## Stack
+- Vue 3 + TypeScript + Vite
+- Pinia + Vue Router + TanStack Query + Zod
+- MapLibre GL + OpenFreeMap / OpenStreetMap data
+- Cloudflare Workers + Hono
+- Cloudflare Durable Objects WebSocket realtime
+- Supabase PostgreSQL + Storage
 
-Frontend: Vue 3 + TypeScript + Vite + Vue Router + Pinia + TanStack Vue Query + Zod + MapLibre.
+## V15.3 focus
+V15.3 is a stabilization release: visual parity after the Vue refactor, custom V I B E map styling, in-app notification center, realtime cache refresh/reconnect, and strict separation between internal chat and Telegram bot notifications.
 
-Backend: Cloudflare Workers + Hono + TypeScript + Zod.
-
-Data: Supabase PostgreSQL + Storage.
-
-## Команды
-
-```bash
-npm install
-npm run dev
-npm run typecheck
-npm run build
-npm run deploy
-```
-
-## Production settings
-
-Публичные значения уже настроены в `wrangler.jsonc`:
-
-- Supabase URL: `https://oqjtaukwtzvhygdikdcd.supabase.co`
-- Telegram bot: `@vibeminsk_bot`
-- Mini App short name: `app`
-- Worker URL: `https://vibe-minsk.mamazaxist9797.workers.dev`
-
-Secrets остаются только в Cloudflare Dashboard:
-
-- `SUPABASE_SECRET_KEY`
-- `TELEGRAM_BOT_TOKEN`
-
-## Совместимость
-
-V15 использует существующую схему Supabase V14.1. SQL-миграция не требуется.
-
-Старый монолитный `POST /api { action: ... }` частично сохранён как переходный compatibility endpoint. Новый Vue frontend использует REST API `/api/...`.
-
-
-## Cloudflare Git build
-
-Для подключённого GitHub репозитория:
-
-- Build command: `npm run build`
-- Deploy command: `npx wrangler deploy`
-
-Для ручного CLI deploy: `npm run deploy`.
+See `V15.3-UPGRADE-RU.md` for deployment instructions.
