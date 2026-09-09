@@ -64,3 +64,87 @@ button,.event-card-link,.native-mini-card,.person-row,.compact-event-row,.reques
 .map-sheet-actions{display:grid;grid-template-columns:auto 1fr;gap:6px;margin-top:6px}.map-sheet-actions .secondary,.map-sheet-actions .primary{min-height:38px;font-size:9px}.map-sheet-actions .secondary{display:flex;align-items:center;justify-content:center;gap:5px;padding:0 10px}
 @supports(content-visibility:auto){.home>.section,.favorites-list>.event-card-native,.notification-item,.manage-row{content-visibility:auto;contain-intrinsic-size:120px}}
 .map-skeleton{position:absolute;z-index:40;inset:0;background:#08090b;display:grid;place-items:center;color:var(--muted);font-size:10px;overflow:hidden}.map-skeleton-grid{position:absolute;inset:-20%;background:linear-gradient(90deg,transparent 49%,rgba(255,255,255,.035) 50%,transparent 51%),linear-gradient(0deg,transparent 49%,rgba(255,255,255,.035) 50%,transparent 51%),radial-gradient(circle at 48% 52%,rgba(255,73,109,.12),transparent 22%);background-size:46px 46px,46px 46px,100% 100%;transform:rotate(-8deg) scale(1.1);animation:map-skeleton-drift 2.4s ease-in-out infinite alternate}.map-skeleton span{position:relative;z-index:1;padding:8px 11px;border:1px solid var(--line);background:rgba(15,16,18,.88);border-radius:999px}@keyframes map-skeleton-drift{to{transform:rotate(-8deg) scale(1.14) translate3d(8px,-5px,0)}}.map-fade-enter-active,.map-fade-leave-active{transition:opacity .28s ease}.map-fade-enter-from,.map-fade-leave-to{opacity:0}
+
+
+/* V17.1 — visual hierarchy audit */
+.topbar-native{height:48px}
+.home-map-button{width:32px!important;height:32px!important;border-radius:10px!important;background:transparent!important;border-color:var(--line)!important}
+
+/* Chips: accent state instead of a heavy white pill */
+.quick-filters button,.tabs button,.map-filters button{
+  min-height:36px;
+  padding:6px 11px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.11);
+  background:rgba(255,255,255,.025);
+  color:var(--muted);
+  font-size:10px;
+  font-weight:500;
+  transition:background .16s ease,border-color .16s ease,color .16s ease,transform .15s ease;
+}
+.quick-filters button.active,.tabs button.active,.map-filters button.active{
+  background:rgba(255,73,109,.12);
+  color:#ff8aa2;
+  border-color:rgba(255,73,109,.34);
+  font-weight:650;
+  box-shadow:none;
+}
+.quick-filters button:active,.tabs button:active,.map-filters button:active{transform:scale(.97)}
+
+/* Main event card: stable media ratio and cleaner overlay */
+.event-card-native{border-radius:16px;background:var(--panel);box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.event-media-native{height:auto!important;aspect-ratio:16/9;background:#101115}
+.event-media-native:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,rgba(0,0,0,.04) 0%,rgba(0,0,0,.08) 44%,rgba(0,0,0,.58) 100%)!important;
+  pointer-events:none;
+}
+.kind-pill{
+  left:10px;top:10px;
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:10px;
+  line-height:1.1;
+  letter-spacing:.04em;
+  background:rgba(10,10,12,.66);
+  border:1px solid rgba(255,255,255,.08);
+}
+.heart-overlay{width:34px;height:34px;border-radius:10px;background:rgba(10,10,12,.62)}
+.event-card-body{padding:10px 11px 11px}
+.event-kicker{font-size:11px;gap:5px}
+.event-card-body h3{font-size:18px;line-height:1.13;letter-spacing:-.025em;margin:4px 0 3px;font-weight:680}
+.event-card-body p{font-size:12px;line-height:1.38;margin-bottom:8px;color:var(--text-2)}
+.event-native-meta{gap:5px}
+.event-native-meta span{padding:4px 7px;border-radius:8px;font-size:10px}
+.event-native-host{margin-top:8px;font-size:10px}
+
+/* Tab bar: thin separator, accent only on active item, smaller create action */
+.bottom-nav-native{
+  border-top:1px solid rgba(255,255,255,.08);
+  background:rgba(10,10,11,.94);
+  box-shadow:0 -8px 24px rgba(0,0,0,.18);
+}
+.bottom-nav-native>a{color:#707178;gap:2px}
+.bottom-nav-native>a.active{color:var(--accent)}
+.bottom-nav-native>a small{font-size:9px;font-weight:500}
+.bottom-nav-native>a.active small{font-weight:650;color:var(--accent)}
+.bottom-nav-native .create-native{color:var(--text-2)}
+.bottom-nav-native .create-native .ui-icon{
+  width:40px!important;
+  height:40px!important;
+  padding:10px!important;
+  border-radius:12px!important;
+  background:rgba(255,255,255,.055)!important;
+  border:1px solid rgba(255,255,255,.12);
+  color:var(--text)!important;
+  box-shadow:none!important;
+}
+.bottom-nav-native .create-native.active .ui-icon{
+  background:rgba(255,73,109,.12)!important;
+  border-color:rgba(255,73,109,.28)!important;
+  color:var(--accent)!important;
+}
+.bottom-nav-native .create-native small{display:none}
+.nav-badge{top:3px}

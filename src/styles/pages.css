@@ -30,3 +30,55 @@
 @media(max-width:360px){:root{--page-pad:10px;--nav-h:56px}.event-media-native{height:164px}.home-heading h1{font-size:27px}.detail-cover-native{height:186px}}
 
 .favorites-list{gap:10px}.map-page .bottom-sheet .tags-native{margin:8px 0}.map-page .bottom-sheet .primary{min-height:38px;font-size:9px}.map-page .bottom-sheet .sheet-close{position:absolute;right:8px;top:27px;width:28px;height:28px;border-radius:10px;border:1px solid var(--line);background:rgba(10,10,12,.72);color:var(--text)}
+
+
+/* V17.1 — screen hierarchy and proportion pass */
+.home-heading{
+  align-items:flex-end;
+  gap:10px;
+  padding:12px 0 8px;
+}
+.home-heading small{
+  font-size:11px;
+  line-height:1.15;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  color:var(--muted);
+  font-weight:650;
+}
+.home-heading h1{
+  font-size:24px;
+  line-height:1.04;
+  letter-spacing:-.035em;
+  margin:4px 0 3px;
+  font-weight:700;
+}
+.home-heading p{font-size:12px;line-height:1.35;color:var(--muted)}
+.home-map-button{align-self:flex-end;margin-bottom:1px}
+.search-compact{margin:6px 0 8px;height:42px}
+.compact-filter-row{padding-bottom:10px}
+.feature-section{margin-top:3px}
+.section-tight{margin-top:16px}
+.section-head h2{font-size:19px;font-weight:680}
+.section-head small{font-size:11px}
+.section-head>a{font-size:11px}
+
+.native-mini-card{min-width:210px;border-radius:14px}
+.native-mini-thumb{min-height:82px}
+.native-mini-copy{padding:8px}
+.native-mini-copy small,.native-mini-copy span{font-size:10px}
+.native-mini-copy b{font-size:12px}
+
+.person-row{border-radius:14px;padding:8px}
+.person-row b{font-size:11px}.person-row small{font-size:9px}.person-row span{font-size:10px}
+.compact-event-row{border-radius:12px;padding:7px}.compact-event-row small,.compact-event-row span{font-size:9px}.compact-event-row b{font-size:11.5px}
+
+@media(max-width:420px){
+  .event-media-native{height:auto!important;aspect-ratio:16/9!important}
+  .home-heading h1{font-size:23px}
+}
+@media(max-width:360px){
+  :root{--page-pad:12px}
+  .home-heading h1{font-size:22px}
+  .event-card-body h3{font-size:17px}
+}

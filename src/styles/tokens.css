@@ -16,15 +16,15 @@
   --warning:#f4b45f;
   --danger:#ff6a72;
   --radius-xs:8px;
-  --radius-sm:11px;
-  --radius:14px;
+  --radius-sm:12px;
+  --radius:16px;
   --radius-lg:18px;
   --nav-h:58px;
-  --topbar-h:50px;
+  --topbar-h:48px;
   --safe-bottom:env(safe-area-inset-bottom,0px);
   --page-max:620px;
-  --page-pad:12px;
-  --section-gap:20px;
+  --page-pad:14px;
+  --section-gap:18px;
   font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   color-scheme:dark;
 }

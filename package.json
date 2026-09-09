@@ -1,6 +1,6 @@
 {
-  "name": "vibe-minsk-cloudflare-v17",
-  "version": "17.0.0",
+  "name": "vibe-minsk-cloudflare-v17-1",
+  "version": "17.1.0",
   "private": true,
   "type": "module",
   "scripts": {
