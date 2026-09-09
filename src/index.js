@@ -283,7 +283,7 @@ async function handleJsonAction(req, client, body) {
   const action = body?.action;
 
   if (action === 'public_config') {
-    return json({ ok: true, config: { yandexMapsApiKey: RUNTIME_ENV.YANDEX_MAPS_API_KEY || '', appUrl: RUNTIME_ENV.APP_URL || '' } });
+    return json({ ok: true, config: { appUrl: RUNTIME_ENV.APP_URL || '', mapEngine: 'maplibre-osm' } });
   }
 
   if (action === 'events') {
@@ -306,7 +306,7 @@ async function handleJsonAction(req, client, body) {
     const botUsername = (RUNTIME_ENV.TELEGRAM_BOT_USERNAME || '').replace(/^@/, '');
     const shortName = (RUNTIME_ENV.TELEGRAM_APP_SHORT_NAME || '').replace(/^\//, '');
     const appLinkBase = botUsername ? (shortName ? `https://t.me/${botUsername}/${shortName}` : `https://t.me/${botUsername}`) : '';
-    return json({ ok: true, user: userDto(user), stats: { myEvents: events.count || ownIds.length, pendingRequests: pendingCount, unreadNotifications: notes.count || 0 }, config: { appLinkBase, appUrl: RUNTIME_ENV.APP_URL || '', yandexMapsApiKey: RUNTIME_ENV.YANDEX_MAPS_API_KEY || '' } });
+    return json({ ok: true, user: userDto(user), stats: { myEvents: events.count || ownIds.length, pendingRequests: pendingCount, unreadNotifications: notes.count || 0 }, config: { appLinkBase, appUrl: RUNTIME_ENV.APP_URL || '', mapEngine: 'maplibre-osm' } });
   }
 
   const user = await currentUser(req, client, true);

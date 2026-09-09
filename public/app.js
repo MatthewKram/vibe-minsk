@@ -51,11 +51,11 @@ const KIND_META = {
 
 const state = {
   route: { name: 'home' }, history: [],
-  tg: null, tgUser: null, user: null, appLinkBase: '', appUrl: '', yandexMapsApiKey: '', sessionStats: { myEvents: 0, pendingRequests: 0, unreadNotifications: 0 },
+  tg: null, tgUser: null, user: null, appLinkBase: '', appUrl: '', sessionStats: { myEvents: 0, pendingRequests: 0, unreadNotifications: 0 },
   events: [], myEvents: [], incoming: [], outgoing: [], chats: [], notifications: [], favoriteEvents: [],
   currentMessages: [], profileView: null,
   query: '', timeFilter: 'Все', kindFilter: 'all', priceFilter: 'all', districtFilter: 'all', radius: 20,
-  inboxTab: 'incoming', userPos: null, map: null, notificationSheet: false,
+  inboxTab: 'incoming', userPos: null, map: null, mapPulse: null, mapFilter: 'today', mapSelectedId: null, notificationSheet: false,
   loading: true, busy: false, authError: null, publicOnly: false,
   chatPoll: null,
   createDraft: defaultDraft(),
@@ -139,7 +139,6 @@ async function bootstrap() {
   render();
   try {
     const cfg = await api('public_config', {}, { silent: true });
-    state.yandexMapsApiKey = cfg?.config?.yandexMapsApiKey || '';
   } catch {}
 
   try {
@@ -155,7 +154,6 @@ async function bootstrap() {
     state.sessionStats = session.stats || state.sessionStats;
     state.appLinkBase = session.config?.appLinkBase || '';
     state.appUrl = session.config?.appUrl || '';
-    state.yandexMapsApiKey = session.config?.yandexMapsApiKey || state.yandexMapsApiKey;
     await refreshPrivateData(false);
   } catch (error) {
     if (error.status === 401) {
@@ -388,15 +386,43 @@ function eventScreen(id) {
 }
 
 function mapScreen() {
-  const events = filteredEvents();
-  return `<section class="screen map-v12">${topBar('карта',false)}
-    <div class="v12-map-head"><div><small>Минск · события рядом</small><h1>Карта движений</h1><p>Нажмите на метку, чтобы открыть событие. Карта показывает только Минск.</p></div><button class="round-action" data-action="geo">${icon('pin')}</button></div>
-    <div class="v12-map-filters"><button data-time="Сейчас" class="${state.timeFilter==='Сейчас'?'active':''}">Сейчас</button><button data-time="Сегодня" class="${state.timeFilter==='Сегодня'?'active':''}">Сегодня</button><button data-time="Все" class="${state.timeFilter==='Все'?'active':''}">Все</button></div>
-    <div class="map-shell v12-map-shell"><div id="map" class="yandex-map"></div></div>
-    <div class="v12-map-list"><div class="v11-title"><div><h3>Рядом на карте</h3><span>${events.length} событий</span></div></div>${events.slice(0,6).map(listCard).join('')||empty('', 'На карте пока тихо', 'Попробуйте переключить фильтр.')}</div>
+  const events = mapEvents();
+  const selected = events.find(e => e.id === state.mapSelectedId) || null;
+  return `<section class="screen vibe-map-screen">${topBar('карта',false)}
+    <div class="vibe-map-head"><div><small>МИНСК · ЖИВОЙ ГОРОД</small><h1>Карта вечера</h1><p>События, компании и места прямо на карте V I B E.</p></div><button class="round-action vibe-locate" data-action="geo">${icon('pin')}</button></div>
+    <div class="vibe-map-filters">
+      <button data-map-filter="now" class="${state.mapFilter==='now'?'active':''}"><i></i>Сейчас</button>
+      <button data-map-filter="today" class="${state.mapFilter==='today'?'active':''}">Сегодня</button>
+      <button data-map-filter="home" class="${state.mapFilter==='home'?'active':''}">Домашние</button>
+      <button data-map-filter="free" class="${state.mapFilter==='free'?'active':''}">Бесплатно</button>
+    </div>
+    <div class="vibe-map-stage">
+      <div id="map" class="vibe-map-canvas"></div>
+      <div class="vibe-map-counter"><b>${events.length}</b><span>событий<br>на карте</span></div>
+      <div class="vibe-map-legend"><span><i class="party"></i>тусовки</span><span><i class="home"></i>домашние</span><span><i class="bar"></i>бары</span></div>
+      <div id="mapEventSheet" class="vibe-map-sheet ${selected?'show':''}">${selected ? mapEventSheetHtml(selected) : ''}</div>
+    </div>
+    <div class="vibe-map-after"><div class="v11-title"><div><h3>Рядом на карте</h3><span>${events.length} событий в Минске</span></div></div><div class="v11-live-list">${events.slice(0,5).map(e=>`<button class="v11-live-row" data-map-focus="${e.id}"><div class="v11-live-img" style="${eventCoverStyle(e)}"></div><div><small>${escapeHtml(e.district)} · ${formatTime(e.startAt)}</small><b>${escapeHtml(e.title)}</b><p>${urgencyText(e)}</p></div><span>${icon('pin')}</span></button>`).join('')||empty('','На карте пока тихо','Попробуйте другой фильтр.')}</div></div>
   </section>`;
 }
 
+function mapEvents(){
+  const now=Date.now(), today=dateKey();
+  return state.events.filter(e=>{
+    if(e.status!=='published'||!Number.isFinite(Number(e.lat))||!Number.isFinite(Number(e.lng))) return false;
+    const diff=new Date(e.startAt).getTime()-now;
+    if(state.mapFilter==='now') return diff>-3600000&&diff<4*3600000;
+    if(state.mapFilter==='today') return dateKey(new Date(e.startAt))===today;
+    if(state.mapFilter==='home') return e.kind==='home';
+    if(state.mapFilter==='free') return Number(e.price)===0;
+    return true;
+  }).sort((a,b)=>new Date(a.startAt)-new Date(b.startAt));
+}
+function mapKindColor(kind){return ({party:'#ff4778',home:'#a77bff',bar:'#ff9b55',music:'#4dd9ff',games:'#8ee08e',social:'#ff77bd',spontaneous:'#ffe45e'})[kind]||'#ff4778';}
+function mapEventSheetHtml(e){
+  const spots=Math.max(0,e.capacity-e.people);
+  return `<button class="map-sheet-close" data-map-sheet-close>${icon('close')}</button><div class="map-sheet-cover" style="${eventCoverStyle(e)}"></div><div class="map-sheet-copy"><small>${escapeHtml(e.district)} · ${formatTime(e.startAt)}</small><b>${escapeHtml(e.title)}</b><p>${e.people} идут · ${spots?`${spots} мест`:'мест нет'} · ${formatPrice(e.price)}</p><button data-event="${e.id}">Открыть событие ${icon('arrow')}</button></div>`;
+}
 function createScreen() {
   const d = state.createDraft;
   if (!state.user) return `<section class="screen">${topBar('создать событие')}${authBanner()}${empty('', 'Нужен Telegram','Откройте V I B E через бота, чтобы публиковать события.')}</section>`;
@@ -522,7 +548,7 @@ function navigate(name, params={}, push=true) {
   if (name==='user') loadUser(params.id);
 }
 function goBack() { cleanupMap(); state.route=state.history.pop()||{name:'home'}; render(); }
-function cleanupMap(){ if(state.map){try{state.map.destroy?.();}catch{} try{state.map.remove?.();}catch{} state.map=null;} }
+function cleanupMap(){ if(state.mapPulse){clearInterval(state.mapPulse);state.mapPulse=null;} if(state.map){try{state.map.remove?.();}catch{} state.map=null;} }
 
 async function loadEvent(id) {
   try {
@@ -542,6 +568,9 @@ function bindGlobal() {
   $$('[data-back]').forEach(b=>b.addEventListener('click',goBack));
   $$('[data-event]').forEach(b=>b.addEventListener('click',ev=>{if(ev.target.closest('[data-favorite]'))return;navigate('event',{id:b.dataset.event});}));
   $$('[data-time]').forEach(b=>b.addEventListener('click',()=>{state.timeFilter=b.dataset.time;render();}));
+  $$('[data-map-filter]').forEach(b=>b.addEventListener('click',()=>{state.mapFilter=b.dataset.mapFilter;state.mapSelectedId=null;cleanupMap();render();}));
+  $$('[data-map-focus]').forEach(b=>b.addEventListener('click',()=>focusMapEvent(b.dataset.mapFocus)));
+  $$('[data-map-sheet-close]').forEach(b=>b.addEventListener('click',()=>closeMapEventSheet()));
   $$('[data-kind]').forEach(b=>b.addEventListener('click',()=>{state.kindFilter=b.dataset.kind;render();}));
   $$('[data-district]').forEach(b=>b.addEventListener('click',()=>{state.districtFilter=b.dataset.district;state.timeFilter='Все';render();}));
   $('#districtFilter')?.addEventListener('change',e=>{state.districtFilter=e.target.value;render();});
@@ -648,37 +677,75 @@ async function openNotification(button){const id=button.dataset.notification;con
 
 function requestGeolocation(){if(!navigator.geolocation)return toast('Браузер не поддерживает геолокацию.');navigator.geolocation.getCurrentPosition(pos=>{const candidate=[pos.coords.latitude,pos.coords.longitude];const d=distanceKm(MINSK_CENTER,candidate);if(d>MINSK_RADIUS_KM){state.userPos=null;toast('V I B E ищет события только в Минске.');}else{state.userPos=candidate;toast('Геолокация обновлена.');}render();},()=>toast('Не удалось получить геолокацию. Показываем весь Минск.'))}
 
-async function loadYandexMaps(){
-  if(window.ymaps)return window.ymaps;
-  if(!state.yandexMapsApiKey)throw new Error('YANDEX_MAPS_API_KEY не настроен');
-  if(window.__vibeYandexPromise)return window.__vibeYandexPromise;
-  window.__vibeYandexPromise=new Promise((resolve,reject)=>{
-    const sc=document.createElement('script');
-    sc.src=`https://api-maps.yandex.ru/2.1/?apikey=${encodeURIComponent(state.yandexMapsApiKey)}&lang=ru_RU`;
-    sc.async=true; sc.onload=()=>window.ymaps?.ready(()=>resolve(window.ymaps)); sc.onerror=()=>reject(new Error('Не удалось загрузить Яндекс Карты'));
-    document.head.appendChild(sc);
-  });
-  return window.__vibeYandexPromise;
+function mapGeoJSON(events=mapEvents()){
+  return {type:'FeatureCollection',features:events.map(e=>({type:'Feature',geometry:{type:'Point',coordinates:[Number(e.lng),Number(e.lat)]},properties:{id:e.id,title:e.title,kind:e.kind,district:e.district,startAt:e.startAt,price:Number(e.price||0),people:Number(e.people||0),capacity:Number(e.capacity||0),color:mapKindColor(e.kind)}}))};
+}
+function mapPointColors(){return ['match',['get','kind'],'home','#a77bff','bar','#ff9b55','music','#4dd9ff','games','#8ee08e','social','#ff77bd','spontaneous','#ffe45e','#ff4778'];}
+function tuneVibeMapStyle(map){
+  try{
+    const layers=map.getStyle()?.layers||[];
+    for(const layer of layers){
+      const id=(layer.id||'').toLowerCase();
+      if(layer.type==='background') map.setPaintProperty(layer.id,'background-color','#09090b');
+      if(layer.type==='fill'){
+        if(id.includes('water')) map.setPaintProperty(layer.id,'fill-color','#0b1520');
+        else if(id.includes('park')||id.includes('wood')||id.includes('grass')) map.setPaintProperty(layer.id,'fill-color','#101914');
+        else if(id.includes('building')) map.setPaintProperty(layer.id,'fill-color','#17171b');
+        else if(id.includes('land')||id.includes('residential')) map.setPaintProperty(layer.id,'fill-color','#0e0e11');
+      }
+      if(layer.type==='line'){
+        if(id.includes('road')||id.includes('street')||id.includes('highway')){map.setPaintProperty(layer.id,'line-color',id.includes('major')||id.includes('primary')?'#29242a':'#1c1c21');}
+        else if(id.includes('boundary')) map.setPaintProperty(layer.id,'line-color','#29252d');
+      }
+      if(layer.type==='symbol'){
+        try{map.setPaintProperty(layer.id,'text-color','#8f8b93');map.setPaintProperty(layer.id,'text-halo-color','#09090b');map.setPaintProperty(layer.id,'text-halo-width',1.2);}catch{}
+      }
+    }
+  }catch{}
 }
 async function initMap(){
-  const el=$('#map');if(!el)return;
-  el.innerHTML='<div class="v12-map-loading">Загружаем Яндекс Карты…</div>';
+  const el=$('#map'); if(!el)return;
+  if(!window.maplibregl){renderFallbackMap(el,'Не удалось загрузить движок карты.');return;}
+  const events=mapEvents();
   try{
-    const ymaps=await loadYandexMaps(); if(state.route.name!=='map'||!$('#map'))return;
-    const center=state.userPos||MINSK_CENTER;
-    state.map=new ymaps.Map('map',{center,zoom:12,controls:['zoomControl','geolocationControl']},{suppressMapOpenBlock:true});
-    if(state.userPos){state.map.geoObjects.add(new ymaps.Placemark(state.userPos,{hintContent:'Вы здесь'},{preset:'islands#blueCircleDotIcon'}));}
-    for(const e of filteredEvents()){
-      const mark=new ymaps.Placemark([e.lat,e.lng],{hintContent:e.title,balloonContentHeader:escapeHtml(e.title),balloonContentBody:`${escapeHtml(e.district)} · ${formatTime(e.startAt)}<br>${formatPrice(e.price)}`},{preset:e.kind==='home'?'islands#violetHomeIcon':'islands#redCircleDotIcon'});
-      mark.events.add('click',()=>setTimeout(()=>navigate('event',{id:e.id}),120)); state.map.geoObjects.add(mark);
-    }
-    setTimeout(()=>state.map?.container?.fitToViewport?.(),150);
+    const center=state.userPos?[state.userPos[1],state.userPos[0]]:[MINSK_CENTER[1],MINSK_CENTER[0]];
+    const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center,zoom:12.2,minZoom:10,maxZoom:18,attributionControl:false,pitch:0,bearing:0});
+    state.map=map;
+    map.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:'V I B E · данные © OpenStreetMap'}),'bottom-right');
+    map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
+    map.on('style.load',()=>tuneVibeMapStyle(map));
+    map.on('load',()=>{
+      tuneVibeMapStyle(map);
+      const geo=mapGeoJSON(events);
+      map.addSource('vibe-events',{type:'geojson',data:geo,cluster:true,clusterMaxZoom:14,clusterRadius:48});
+      map.addSource('vibe-heat',{type:'geojson',data:geo});
+      map.addLayer({id:'vibe-heat',type:'heatmap',source:'vibe-heat',maxzoom:15,paint:{'heatmap-weight':1,'heatmap-intensity':['interpolate',['linear'],['zoom'],10,.55,15,1.4],'heatmap-radius':['interpolate',['linear'],['zoom'],10,24,15,46],'heatmap-opacity':['interpolate',['linear'],['zoom'],10,.4,15,.12],'heatmap-color':['interpolate',['linear'],['heatmap-density'],0,'rgba(0,0,0,0)',.2,'rgba(255,71,120,.05)',.45,'rgba(255,71,120,.18)',.7,'rgba(167,123,255,.26)',1,'rgba(255,155,85,.38)']}});
+      map.addLayer({id:'vibe-clusters-halo',type:'circle',source:'vibe-events',filter:['has','point_count'],paint:{'circle-color':'rgba(255,71,120,.14)','circle-radius':['step',['get','point_count'],25,5,32,12,40]}});
+      map.addLayer({id:'vibe-clusters',type:'circle',source:'vibe-events',filter:['has','point_count'],paint:{'circle-color':'#151419','circle-stroke-color':'#ff4778','circle-stroke-width':2,'circle-radius':['step',['get','point_count'],18,5,23,12,28]}});
+      map.addLayer({id:'vibe-cluster-count',type:'symbol',source:'vibe-events',filter:['has','point_count'],layout:{'text-field':['get','point_count_abbreviated'],'text-size':12},paint:{'text-color':'#fff'}});
+      map.addLayer({id:'vibe-event-halo',type:'circle',source:'vibe-events',filter:['!',['has','point_count']],paint:{'circle-color':mapPointColors(),'circle-radius':16,'circle-opacity':.17}});
+      map.addLayer({id:'vibe-events',type:'circle',source:'vibe-events',filter:['!',['has','point_count']],paint:{'circle-color':mapPointColors(),'circle-radius':8,'circle-stroke-color':'#fff','circle-stroke-width':2}});
+      map.addLayer({id:'vibe-event-label',type:'symbol',source:'vibe-events',filter:['!',['has','point_count']],minzoom:13.2,layout:{'text-field':['get','title'],'text-size':11,'text-offset':[0,1.45],'text-anchor':'top','text-max-width':12},paint:{'text-color':'#f6f3ef','text-halo-color':'#09090b','text-halo-width':2}});
+      map.on('click','vibe-clusters',async ev=>{const f=map.queryRenderedFeatures(ev.point,{layers:['vibe-clusters']})[0];if(!f)return;const zoom=await map.getSource('vibe-events').getClusterExpansionZoom(f.properties.cluster_id);map.easeTo({center:f.geometry.coordinates,zoom});});
+      map.on('click','vibe-events',ev=>{const f=ev.features?.[0];if(!f)return;selectMapEvent(String(f.properties.id));});
+      ['vibe-clusters','vibe-events'].forEach(layer=>{map.on('mouseenter',layer,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',layer,()=>map.getCanvas().style.cursor='');});
+      if(state.userPos){const dot=document.createElement('div');dot.className='vibe-user-dot';new maplibregl.Marker({element:dot}).setLngLat([state.userPos[1],state.userPos[0]]).addTo(map);}
+      if(events.length>1){const bounds=new maplibregl.LngLatBounds();events.forEach(e=>bounds.extend([Number(e.lng),Number(e.lat)]));map.fitBounds(bounds,{padding:{top:80,bottom:170,left:45,right:45},maxZoom:14,duration:700});}
+      state.mapPulse=setInterval(()=>{if(!state.map||!state.map.getLayer('vibe-event-halo'))return;const wide=state.map.getPaintProperty('vibe-event-halo','circle-radius')===16;state.map.setPaintProperty('vibe-event-halo','circle-radius',wide?22:16);state.map.setPaintProperty('vibe-event-halo','circle-opacity',wide ? .08 : .17);},1100);
+    });
+    map.on('error',e=>{if(!state.map)return;console.warn('VIBE map:',e?.error||e);});
   }catch(err){renderFallbackMap(el,err.message);}
 }
-
+function selectMapEvent(id){
+  const e=mapEvents().find(x=>String(x.id)===String(id));if(!e)return;
+  state.mapSelectedId=e.id;
+  const sheet=$('#mapEventSheet');if(sheet){sheet.innerHTML=mapEventSheetHtml(e);sheet.classList.add('show');sheet.querySelector('[data-event]')?.addEventListener('click',()=>navigate('event',{id:e.id}));sheet.querySelector('[data-map-sheet-close]')?.addEventListener('click',closeMapEventSheet);}
+  state.map?.easeTo({center:[Number(e.lng),Number(e.lat)],zoom:14.5,padding:{bottom:180},duration:550});
+}
+function closeMapEventSheet(){state.mapSelectedId=null;const sheet=$('#mapEventSheet');if(sheet){sheet.classList.remove('show');setTimeout(()=>sheet.innerHTML='',220);}}
+function focusMapEvent(id){const e=mapEvents().find(x=>String(x.id)===String(id));if(!e)return;selectMapEvent(id);document.querySelector('.vibe-map-stage')?.scrollIntoView({behavior:'smooth',block:'center'});}
 function renderFallbackMap(el,reason=''){
-  const items=filteredEvents().slice(0,8);
-  el.innerHTML=`<div class="v12-map-fallback"><div class="v12-map-fallback-copy">${icon('map')}<b>Яндекс Карты пока не подключены</b><p>${escapeHtml(reason||'Добавьте API-ключ Яндекс Карт в Cloudflare.')}</p><small>События всё равно доступны ниже.</small></div></div>`;
+  el.innerHTML=`<div class="vibe-map-fallback"><div>${icon('map')}<b>Карта V I B E временно недоступна</b><p>${escapeHtml(reason||'Проверьте интернет-соединение.')}</p><small>Список событий продолжает работать.</small></div></div>`;
 }
 
 function shareEvent(id){const e=state.events.find(x=>x.id===id)||state.myEvents.find(x=>x.id===id);if(!e)return;const text=`🌴 ${e.title}\n${formatDate(e.startAt)} · ${e.district} · ${formatPrice(e.price)}\nV I B E — Минск`;const url=state.appLinkBase?`${state.appLinkBase}?startapp=${encodeURIComponent('event_'+id)}`:(state.appUrl||location.origin+location.pathname)+`?event=${encodeURIComponent(id)}`;if(state.tg?.openTelegramLink)state.tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);else if(navigator.share)navigator.share({title:e.title,text,url}).catch(()=>{});else navigator.clipboard?.writeText(`${text}\n${url}`).then(()=>toast('Ссылка скопирована.'));}
