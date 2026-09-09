@@ -1,26 +1,16 @@
-# V I B E V15.3.1 — Realtime build fix
+# V I B E V15.3.2 — Build completeness fix
 
-Этот пакет исправляет ошибку Cloudflare Build:
+Этот пакет исправляет ошибку Cloudflare:
 
-- `Could not resolve './lib/realtime'`
-- `Could not resolve './lib/realtime-token'`
-- `Could not resolve './realtime'`
+`Could not load src/services/queryClient`
 
-## Что делать
+В предыдущий upload не попал `src/services/queryClient.ts`. Чтобы не ловить отсутствующие realtime-файлы по одному, пакет содержит весь критичный client/realtime слой.
 
-Распакуйте архив поверх текущего GitHub-репозитория с заменой файлов и сделайте Commit в `main`.
+## Установка
 
-Будут добавлены/обновлены:
+1. Распакуй ZIP.
+2. Загрузи **содержимое папки** в корень GitHub-репозитория с заменой файлов и сохранением структуры папок.
+3. Commit changes.
+4. Cloudflare автоматически запустит новый build.
 
-- `worker/index.ts`
-- `worker/types.ts`
-- `worker/realtime.ts`
-- `worker/lib/realtime.ts`
-- `worker/lib/realtime-token.ts`
-- `wrangler.jsonc`
-- `package.json`
-- `scripts/realtime-check.mjs`
-
-SQL, Supabase, BotFather и Cloudflare Secrets менять не нужно.
-
-`wrangler.jsonc` уже содержит binding Durable Object `REALTIME` и декларацию `RealtimeHub` с SQLite storage.
+Supabase, SQL, Secrets и BotFather менять не надо.
