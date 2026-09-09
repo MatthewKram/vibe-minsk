@@ -51,7 +51,7 @@ const KIND_META = {
 
 const state = {
   route: { name: 'home' }, history: [],
-  tg: null, tgUser: null, user: null, appLinkBase: '', appUrl: '', sessionStats: { myEvents: 0, pendingRequests: 0, unreadNotifications: 0 },
+  tg: null, tgUser: null, user: null, appLinkBase: '', appUrl: '', yandexMapsApiKey: '', sessionStats: { myEvents: 0, pendingRequests: 0, unreadNotifications: 0 },
   events: [], myEvents: [], incoming: [], outgoing: [], chats: [], notifications: [], favoriteEvents: [],
   currentMessages: [], profileView: null,
   query: '', timeFilter: 'Все', kindFilter: 'all', priceFilter: 'all', districtFilter: 'all', radius: 20,
@@ -138,6 +138,11 @@ async function bootstrap() {
   setupTelegram();
   render();
   try {
+    const cfg = await api('public_config', {}, { silent: true });
+    state.yandexMapsApiKey = cfg?.config?.yandexMapsApiKey || '';
+  } catch {}
+
+  try {
     const events = await api('events', {}, { silent: false });
     state.events = events.events || [];
   } catch (error) {
@@ -150,6 +155,7 @@ async function bootstrap() {
     state.sessionStats = session.stats || state.sessionStats;
     state.appLinkBase = session.config?.appLinkBase || '';
     state.appUrl = session.config?.appUrl || '';
+    state.yandexMapsApiKey = session.config?.yandexMapsApiKey || state.yandexMapsApiKey;
     await refreshPrivateData(false);
   } catch (error) {
     if (error.status === 401) {
@@ -381,11 +387,31 @@ function eventScreen(id) {
   </section>`;
 }
 
+function mapScreen() {
+  const events = filteredEvents();
+  return `<section class="screen map-v12">${topBar('карта',false)}
+    <div class="v12-map-head"><div><small>Минск · события рядом</small><h1>Карта движений</h1><p>Нажмите на метку, чтобы открыть событие. Карта показывает только Минск.</p></div><button class="round-action" data-action="geo">${icon('pin')}</button></div>
+    <div class="v12-map-filters"><button data-time="Сейчас" class="${state.timeFilter==='Сейчас'?'active':''}">Сейчас</button><button data-time="Сегодня" class="${state.timeFilter==='Сегодня'?'active':''}">Сегодня</button><button data-time="Все" class="${state.timeFilter==='Все'?'active':''}">Все</button></div>
+    <div class="map-shell v12-map-shell"><div id="map" class="yandex-map"></div></div>
+    <div class="v12-map-list"><div class="v11-title"><div><h3>Рядом на карте</h3><span>${events.length} событий</span></div></div>${events.slice(0,6).map(listCard).join('')||empty('', 'На карте пока тихо', 'Попробуйте переключить фильтр.')}</div>
+  </section>`;
+}
+
 function createScreen() {
   const d = state.createDraft;
   if (!state.user) return `<section class="screen">${topBar('создать событие')}${authBanner()}${empty('', 'Нужен Telegram','Откройте V I B E через бота, чтобы публиковать события.')}</section>`;
-  const preview={kind:d.kind,title:d.title||'Название вашего события',district:d.district,startAt:minskIso(d.date,d.time),price:d.price,capacity:d.capacity,people:1,organizer:{name:state.user.name},tags:d.tags.split(',').map(x=>x.trim()).filter(Boolean),coverUrl:null,vibe:'НОВОЕ'};
-  return `<section class="screen create-v7">${topBar('создать',true)}<div class="create-head"><div class="live-kicker"><span></span> новая точка на карте</div><h1>Создай<br><em>свой движ.</em></h1><p>Заполни основу — событие сразу появится у людей в Минске.</p></div><div class="create-preview">${eventCard({...preview,id:'preview',favorite:false,owner:true,lat:MINSK_CENTER[0],lng:MINSK_CENTER[1],age:d.age,desc:d.description,status:'draft',requiresApproval:d.requiresApproval,emoji:'✨'})}</div><form id="createForm" class="form-wrap v7"><div class="form-step"><div class="step-label"><span>01</span><h3>Формат</h3></div><div class="choice-grid">${Object.entries(KIND_META).filter(([k])=>k!=='all').map(([k,[em,label]])=>`<button type="button" class="choice ${d.kind===k?'active':''}" data-create-kind="${k}"><span>${kindIcon(k)}</span><b>${label}</b></button>`).join('')}</div></div><div class="form-step"><div class="step-label"><span>02</span><h3>Суть</h3></div><label>Название<input name="title" value="${escapeHtml(d.title)}" maxlength="90" placeholder="Например: Midnight Loft" required></label><label>Описание<textarea name="description" rows="5" maxlength="3000" placeholder="Опиши атмосферу, формат и кого ждёшь…" required>${escapeHtml(d.description)}</textarea></label><label>Теги<input name="tags" value="${escapeHtml(d.tags)}" placeholder="хаус, новые люди, танцы"></label></div><div class="form-step"><div class="step-label"><span>03</span><h3>Время и место</h3></div><div class="field-grid"><label>Дата<input name="date" type="date" value="${d.date}" required></label><label>Время<input name="time" type="time" value="${d.time}" required></label></div><label>Район<select name="district">${Object.keys(DISTRICTS).map(x=>`<option ${d.district===x?'selected':''}>${x}</option>`).join('')}</select></label><label>Публичная локация<input name="publicLocation" value="${escapeHtml(d.publicLocation)}" placeholder="Немига · 5 минут от метро"></label><label>Точный адрес <small>покажем только принятым гостям</small><input name="privateAddress" value="${escapeHtml(d.privateAddress)}" placeholder="улица, дом / название места"></label></div><div class="form-step"><div class="step-label"><span>04</span><h3>Правила</h3></div><div class="field-grid"><label>Вместимость<input name="capacity" type="number" min="2" max="5000" value="${d.capacity}"></label><label>Цена, руб.<input name="price" type="number" min="0" step="1" value="${d.price}"></label></div><label>Возраст<input name="age" value="${escapeHtml(d.age)}" placeholder="18+ или 20–30"></label><label class="check-row"><input name="requiresApproval" type="checkbox" ${d.requiresApproval?'checked':''}><span><b>Ручной вход</b><small>Ты сам решаешь, кто попадёт в событие и увидит адрес.</small></span></label></div><div class="form-step"><div class="step-label"><span>05</span><h3>Обложка</h3></div><label class="upload-box">${icon('spark')} <span><b>Добавить постер</b><small>JPG, PNG или WebP · до 5 МБ</small></span><input id="coverFile" type="file" accept="image/jpeg,image/png,image/webp"></label><small id="coverName">${state.photoFile?escapeHtml(state.photoFile.name):'Можно добавить позже.'}</small></div><button class="primary-btn glow wide publish-btn" type="submit" ${state.busy?'disabled':''}>${state.busy?'Публикуем…':'Опубликовать в Минске'}</button></form></section>`;
+  return `<section class="screen create-v12">${topBar('создать',true)}
+    <div class="v12-create-head"><small>Новое событие · Минск</small><h1>Собери людей<br>на свой план</h1><p>Публикация занимает меньше минуты. Точный адрес домашней встречи увидят только принятые гости.</p></div>
+    <form id="createForm" class="v12-create-form">
+      <section><h3>Что происходит?</h3><div class="choice-grid">${Object.entries(KIND_META).filter(([k])=>k!=='all').map(([k,[em,label]])=>`<button type="button" class="choice ${d.kind===k?'active':''}" data-create-kind="${k}"><span>${kindIcon(k)}</span><b>${label}</b></button>`).join('')}</div></section>
+      <section><label>Название<input name="title" value="${escapeHtml(d.title)}" maxlength="90" placeholder="Например: Квартира на Немиге" required></label><label>Описание<textarea name="description" rows="4" maxlength="3000" placeholder="Атмосфера, музыка, формат, кого ждёте…" required>${escapeHtml(d.description)}</textarea></label><label>Теги<input name="tags" value="${escapeHtml(d.tags)}" placeholder="музыка, общение, настолки"></label></section>
+      <section><h3>Когда и где?</h3><div class="field-grid"><label>Дата<input name="date" type="date" value="${d.date}" required></label><label>Время<input name="time" type="time" value="${d.time}" required></label></div><label>Район<select name="district">${Object.keys(DISTRICTS).map(x=>`<option ${d.district===x?'selected':''}>${x}</option>`).join('')}</select></label><label>Локация для всех<input name="publicLocation" value="${escapeHtml(d.publicLocation)}" placeholder="Немига · 5 минут от метро"></label><label>Точный адрес <small>скрыт до принятия</small><input name="privateAddress" value="${escapeHtml(d.privateAddress)}" placeholder="улица, дом или название места"></label></section>
+      <section><h3>Условия</h3><div class="field-grid"><label>Мест<input name="capacity" type="number" min="2" max="5000" value="${d.capacity}" required></label><label>Цена, руб.<input name="price" type="number" min="0" step="1" value="${d.price}" required></label></div><label>Возраст<input name="age" value="${escapeHtml(d.age)}" placeholder="18+ или 20–30"></label><label class="check-row"><input name="requiresApproval" type="checkbox" ${d.requiresApproval?'checked':''}><span><b>Принимать гостей вручную</b><small>Рекомендуется для домашних вечеринок.</small></span></label></section>
+      <section><h3>Обложка</h3><label class="upload-box">${icon('spark')}<span><b>Выбрать фото</b><small>JPG, PNG, WebP · до 5 МБ</small></span><input id="coverFile" type="file" accept="image/jpeg,image/png,image/webp"></label><small id="coverName">${state.photoFile?escapeHtml(state.photoFile.name):'Можно пропустить — поставим атмосферную обложку.'}</small></section>
+      <div id="createError" class="v12-form-error" hidden></div>
+      <button class="primary-btn wide v12-publish" type="submit" ${state.busy?'disabled':''}>${state.busy?'Публикуем…':'Опубликовать событие'}</button>
+    </form>
+  </section>`;
 }
 
 function statusBadge(status) {
@@ -410,7 +436,7 @@ function empty(icon,title,text){return `<div class="empty"><div>${icon}</div><b>
 function chatScreen(eventId) {
   const chat = state.chats.find(c=>c.eventId===eventId); const event = state.events.find(e=>e.id===eventId)||state.myEvents.find(e=>e.id===eventId);
   const title=event?.title||chat?.event?.title||'Чат';
-  return `<section class="screen chat-screen v7">${topBar(title,true)}<div class="chat-event-bar premium-chat-head"><div class="event-avatar">${kindIcon(event?.kind||'social')}</div><div><small>Чат участников</small><b>${escapeHtml(title)}</b><span><i></i> онлайн-событие · Минск</span></div><button class="round-action small" data-event="${eventId}">${icon('arrow')}</button></div><div class="quick-replies"><button data-quick-msg="Я уже рядом 👋">Я уже рядом</button><button data-quick-msg="Буду через 15 минут">Буду через 15 мин</button><button data-quick-msg="Кто уже на месте?">Кто на месте?</button></div><div id="messages" class="messages">${state.currentMessages.length?state.currentMessages.map(messageBubble).join(''):loadingBlock('Загружаем сообщения…')}</div><form id="chatForm" class="chat-composer"><textarea id="messageInput" rows="1" maxlength="2000" placeholder="Написать участникам…"></textarea><button class="send-btn" type="submit">${icon('send')}</button></form></section>`;
+  return `<section class="screen chat-screen v12-chat">${topBar(title,true)}<div class="chat-event-bar premium-chat-head"><div class="event-avatar">${kindIcon(event?.kind||'social')}</div><div><small>Чат участников</small><b>${escapeHtml(title)}</b><span><i></i> онлайн-событие · Минск</span></div><button class="round-action small" data-event="${eventId}">${icon('arrow')}</button></div><div class="quick-replies"><button data-quick-msg="Я уже рядом 👋">Я уже рядом</button><button data-quick-msg="Буду через 15 минут">Буду через 15 мин</button><button data-quick-msg="Кто уже на месте?">Кто на месте?</button></div><div id="messages" class="messages">${state.currentMessages.length?state.currentMessages.map(messageBubble).join(''):loadingBlock('Загружаем сообщения…')}</div><form id="chatForm" class="chat-composer"><textarea id="messageInput" rows="1" maxlength="2000" placeholder="Написать участникам…"></textarea><button class="send-btn" type="submit">${icon('send')}</button></form></section>`;
 }
 function messageBubble(m) {
   const mine = m.sender_id === state.user?.id;
@@ -496,7 +522,7 @@ function navigate(name, params={}, push=true) {
   if (name==='user') loadUser(params.id);
 }
 function goBack() { cleanupMap(); state.route=state.history.pop()||{name:'home'}; render(); }
-function cleanupMap(){ if(state.map){try{state.map.remove()}catch{} state.map=null;} }
+function cleanupMap(){ if(state.map){try{state.map.destroy?.();}catch{} try{state.map.remove?.();}catch{} state.map=null;} }
 
 async function loadEvent(id) {
   try {
@@ -566,7 +592,39 @@ async function togglePublish(eventId){const e=state.myEvents.find(x=>x.id===even
 
 function onDraftChange(e){const {name}=e.target;if(!name)return;if(e.target.type==='checkbox')state.createDraft[name]=e.target.checked;else if(['capacity','price'].includes(name))state.createDraft[name]=Number(e.target.value);else state.createDraft[name]=e.target.value;}
 function minskIso(date,time){return `${date}T${time}:00+03:00`;}
-async function publishEvent(ev){ev.preventDefault();if(!requireAuth()||state.busy)return;const d=state.createDraft;if(!d.title.trim()||d.description.trim().length<10)return toast('Добавьте название и нормальное описание.');state.busy=true;render();try{const [lat,lng]=DISTRICTS[d.district]||MINSK_CENTER;const jitter=()=> (Math.random()-.5)*.004;const emoji=KIND_META[d.kind]?.[0]||'✨';const schedule=[[d.time,'Сбор участников'],['+30 мин','Знакомство и начало'],['+2 часа','Основная часть вечера']];const r=await api('create_event',{title:d.title,description:d.description,kind:d.kind,emoji,vibe:'НОВОЕ',district:d.district,publicLocation:d.publicLocation||d.district,privateAddress:d.privateAddress,lat:lat+jitter(),lng:lng+jitter(),startAt:minskIso(d.date,d.time),price:d.price,capacity:d.capacity,age:d.age,tags:d.tags.split(',').map(x=>x.trim()).filter(Boolean),schedule,requiresApproval:d.requiresApproval});if(state.photoFile){try{await apiUpload(r.event.id,state.photoFile);}catch(uploadErr){toast(`Событие создано, но обложка не загрузилась: ${uploadErr.message}`);}}state.createDraft=defaultDraft();state.photoFile=null;await Promise.all([refreshEvents(false),refreshPrivateData(false)]);state.busy=false;navigate('manage-event',{id:r.event.id},false);toast('Событие опубликовано в Минске.');haptic('medium');}catch(e){state.busy=false;render();toast(e.message)}}
+async function publishEvent(ev){
+  ev.preventDefault();
+  if(!requireAuth()||state.busy)return;
+  const form=ev.currentTarget;
+  const fd=new FormData(form);
+  const d={
+    kind:state.createDraft.kind,
+    title:String(fd.get('title')||'').trim(), description:String(fd.get('description')||'').trim(), tags:String(fd.get('tags')||''),
+    date:String(fd.get('date')||''), time:String(fd.get('time')||''), district:String(fd.get('district')||'Центр'),
+    publicLocation:String(fd.get('publicLocation')||'').trim(), privateAddress:String(fd.get('privateAddress')||'').trim(),
+    capacity:Number(fd.get('capacity')||10), price:Number(fd.get('price')||0), age:String(fd.get('age')||'18+').trim(),
+    requiresApproval:fd.get('requiresApproval')==='on'
+  };
+  state.createDraft={...state.createDraft,...d};
+  const errorBox=$('#createError');
+  const showError=(msg)=>{if(errorBox){errorBox.hidden=false;errorBox.textContent=msg;}toast(msg);};
+  if(d.title.length<3)return showError('Название должно быть не короче 3 символов.');
+  if(d.description.length<10)return showError('Добавьте описание хотя бы из 10 символов.');
+  if(!d.date||!d.time)return showError('Укажите дату и время.');
+  if(!Number.isFinite(d.capacity)||d.capacity<2)return showError('Укажите минимум 2 места.');
+  const startAt=minskIso(d.date,d.time); if(new Date(startAt).getTime()<Date.now()-30*60*1000)return showError('Выберите текущее или будущее время.');
+  state.busy=true; const submit=form.querySelector('button[type="submit"]'); if(submit){submit.disabled=true;submit.textContent='Публикуем…';}
+  try{
+    const [lat,lng]=DISTRICTS[d.district]||MINSK_CENTER;const jitter=()=> (Math.random()-.5)*.003;
+    const emoji=KIND_META[d.kind]?.[0]||'✨';const schedule=[[d.time,'Сбор участников'],['+30 мин','Начало'],['+2 часа','Основная часть']];
+    const r=await api('create_event',{title:d.title,description:d.description,kind:d.kind,emoji,vibe:'НОВОЕ',district:d.district,publicLocation:d.publicLocation||d.district,privateAddress:d.privateAddress,lat:lat+jitter(),lng:lng+jitter(),startAt,price:d.price,capacity:d.capacity,age:d.age||'18+',tags:d.tags.split(',').map(x=>x.trim()).filter(Boolean),schedule,requiresApproval:d.requiresApproval});
+    if(state.photoFile){try{await apiUpload(r.event.id,state.photoFile);}catch(uploadErr){toast(`Событие создано, но фото не загрузилось: ${uploadErr.message}`);}}
+    state.createDraft=defaultDraft();state.photoFile=null;
+    await Promise.all([refreshEvents(false),refreshPrivateData(false)]);
+    state.busy=false;navigate('manage-event',{id:r.event.id},false);toast('Событие опубликовано и появилось на карте.');haptic('medium');
+  }catch(e){state.busy=false;if(submit){submit.disabled=false;submit.textContent='Опубликовать событие';}showError(e.message||'Не удалось создать событие.');}
+}
+
 async function uploadExistingCover(eventId,file){if(!requireAuth())return;try{toast('Загружаем обложку…');await apiUpload(eventId,file);await Promise.all([refreshEvents(false),refreshPrivateData(false)]);render();toast('Обложка обновлена.');}catch(e){toast(e.message)}}
 
 async function openChat(eventId){if(!requireAuth())return;const exists=state.chats.some(c=>c.eventId===eventId);if(!exists){await refreshPrivateData(false);if(!state.chats.some(c=>c.eventId===eventId))return toast('Чат доступен после принятия заявки.');}state.currentMessages=[];navigate('chat',{id:eventId});}
@@ -590,8 +648,38 @@ async function openNotification(button){const id=button.dataset.notification;con
 
 function requestGeolocation(){if(!navigator.geolocation)return toast('Браузер не поддерживает геолокацию.');navigator.geolocation.getCurrentPosition(pos=>{const candidate=[pos.coords.latitude,pos.coords.longitude];const d=distanceKm(MINSK_CENTER,candidate);if(d>MINSK_RADIUS_KM){state.userPos=null;toast('V I B E ищет события только в Минске.');}else{state.userPos=candidate;toast('Геолокация обновлена.');}render();},()=>toast('Не удалось получить геолокацию. Показываем весь Минск.'))}
 
-function initMap(){const el=$('#map');if(!el)return;if(typeof L==='undefined'){renderFallbackMap(el);return;}const center=state.userPos||MINSK_CENTER;state.map=L.map(el,{zoomControl:true}).setView(center,12.6);L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap &copy; CARTO'}).addTo(state.map);if(state.userPos)L.marker(state.userPos,{icon:L.divIcon({className:'vibe-marker-wrap',html:'<div class="user-marker"></div>',iconSize:[18,18],iconAnchor:[9,9]})}).addTo(state.map).bindPopup('Вы здесь');for(const e of filteredEvents()){const icon=L.divIcon({className:'vibe-marker-wrap',html:`<div class="vibe-marker">${kindIcon(e.kind)}<b>${escapeHtml(e.vibe||'СОБЫТИЕ')}</b></div>`,iconSize:[104,32],iconAnchor:[52,16]});const marker=L.marker([e.lat,e.lng],{icon}).addTo(state.map);marker.on('click',()=>navigate('event',{id:e.id}));}setTimeout(()=>state.map?.invalidateSize(),120);}
-function renderFallbackMap(el){const items=filteredEvents().slice(0,9);const pos=[[18,30],[43,22],[72,31],[30,54],[58,49],[82,60],[17,73],[48,78],[73,82]];el.innerHTML=`<div class="fallback-map"><span class="fallback-road" style="left:6%;top:24%;width:90%;transform:rotate(12deg)"></span><span class="fallback-road" style="left:12%;top:67%;width:82%;transform:rotate(-17deg)"></span><span class="fallback-road" style="left:46%;top:3%;width:85%;transform:rotate(82deg)"></span><span class="fallback-center"></span>${items.map((e,i)=>`<button class="fallback-pin" data-map-event="${e.id}" style="left:${pos[i][0]}%;top:${pos[i][1]}%"><span>${e.emoji}</span><b>${escapeHtml(e.vibe||'СОБЫТИЕ')}</b></button>`).join('')}</div>`;$$('[data-map-event]',el).forEach(b=>b.addEventListener('click',()=>navigate('event',{id:b.dataset.mapEvent})));}
+async function loadYandexMaps(){
+  if(window.ymaps)return window.ymaps;
+  if(!state.yandexMapsApiKey)throw new Error('YANDEX_MAPS_API_KEY не настроен');
+  if(window.__vibeYandexPromise)return window.__vibeYandexPromise;
+  window.__vibeYandexPromise=new Promise((resolve,reject)=>{
+    const sc=document.createElement('script');
+    sc.src=`https://api-maps.yandex.ru/2.1/?apikey=${encodeURIComponent(state.yandexMapsApiKey)}&lang=ru_RU`;
+    sc.async=true; sc.onload=()=>window.ymaps?.ready(()=>resolve(window.ymaps)); sc.onerror=()=>reject(new Error('Не удалось загрузить Яндекс Карты'));
+    document.head.appendChild(sc);
+  });
+  return window.__vibeYandexPromise;
+}
+async function initMap(){
+  const el=$('#map');if(!el)return;
+  el.innerHTML='<div class="v12-map-loading">Загружаем Яндекс Карты…</div>';
+  try{
+    const ymaps=await loadYandexMaps(); if(state.route.name!=='map'||!$('#map'))return;
+    const center=state.userPos||MINSK_CENTER;
+    state.map=new ymaps.Map('map',{center,zoom:12,controls:['zoomControl','geolocationControl']},{suppressMapOpenBlock:true});
+    if(state.userPos){state.map.geoObjects.add(new ymaps.Placemark(state.userPos,{hintContent:'Вы здесь'},{preset:'islands#blueCircleDotIcon'}));}
+    for(const e of filteredEvents()){
+      const mark=new ymaps.Placemark([e.lat,e.lng],{hintContent:e.title,balloonContentHeader:escapeHtml(e.title),balloonContentBody:`${escapeHtml(e.district)} · ${formatTime(e.startAt)}<br>${formatPrice(e.price)}`},{preset:e.kind==='home'?'islands#violetHomeIcon':'islands#redCircleDotIcon'});
+      mark.events.add('click',()=>setTimeout(()=>navigate('event',{id:e.id}),120)); state.map.geoObjects.add(mark);
+    }
+    setTimeout(()=>state.map?.container?.fitToViewport?.(),150);
+  }catch(err){renderFallbackMap(el,err.message);}
+}
+
+function renderFallbackMap(el,reason=''){
+  const items=filteredEvents().slice(0,8);
+  el.innerHTML=`<div class="v12-map-fallback"><div class="v12-map-fallback-copy">${icon('map')}<b>Яндекс Карты пока не подключены</b><p>${escapeHtml(reason||'Добавьте API-ключ Яндекс Карт в Cloudflare.')}</p><small>События всё равно доступны ниже.</small></div></div>`;
+}
 
 function shareEvent(id){const e=state.events.find(x=>x.id===id)||state.myEvents.find(x=>x.id===id);if(!e)return;const text=`🌴 ${e.title}\n${formatDate(e.startAt)} · ${e.district} · ${formatPrice(e.price)}\nV I B E — Минск`;const url=state.appLinkBase?`${state.appLinkBase}?startapp=${encodeURIComponent('event_'+id)}`:(state.appUrl||location.origin+location.pathname)+`?event=${encodeURIComponent(id)}`;if(state.tg?.openTelegramLink)state.tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);else if(navigator.share)navigator.share({title:e.title,text,url}).catch(()=>{});else navigator.clipboard?.writeText(`${text}\n${url}`).then(()=>toast('Ссылка скопирована.'));}
 

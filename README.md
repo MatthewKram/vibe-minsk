@@ -1,46 +1,21 @@
-# V I B E V5 — Минск / Cloudflare Workers
+# V I B E V12 — Минск / Cloudflare Workers
 
-Готовый многопользовательский Telegram Mini App для поиска мероприятий, домашних вечеринок и компаний в Минске.
+V12 — функциональный релиз поверх V11. Исправлены три критичных сценария:
 
-## Уже настроено
+- чат: поле ввода закреплено над нижней навигацией и не съезжает;
+- карта: полноценный экран на **Яндекс Картах JavaScript API 2.1** с событиями Минска;
+- создание события: форма переписана и публикует событие через Cloudflare Worker в Supabase, после чего оно появляется в ленте, карте и «Моих событиях».
 
-- Бренд: **V I B E**
-- Только Минск
-- Supabase project URL: `https://oqjtaukwtzvhygdikdcd.supabase.co`
-- Telegram bot: `@vibeminsk_bot`
-- Worker: `vibe-minsk`
-- Планируемый URL: `https://vibe-minsk.mamazaxist9797.workers.dev`
-- Mini App short name по умолчанию: `app`
+Текущие Supabase-таблицы совместимы. Новая SQL-миграция не нужна.
 
-## Архитектура
+## Что добавить после деплоя
 
-- `public/` — интерфейс Telegram Mini App
-- `src/index.js` — Cloudflare Worker API
-- `supabase/schema.sql` — схема базы, RPC и политики
-- `supabase/seed.sql` — демо-события Минска
-- `wrangler.jsonc` — готовая конфигурация Cloudflare
-- `DEPLOY-CLOUDFLARE-RU.md` — пошаговый запуск
+Для настоящей Яндекс Карты добавьте в Cloudflare Worker обычную переменную:
 
-## Секреты
+`YANDEX_MAPS_API_KEY=ваш_ключ_JavaScript_API`
 
-В репозитории НЕТ и не должно быть:
+Это клиентский ключ карты, поэтому он передаётся браузеру. `wrangler.jsonc` содержит `keep_vars: true`, поэтому переменная, добавленная через Cloudflare Dashboard, не должна удаляться при следующих GitHub-деплоях.
 
-- `SUPABASE_SECRET_KEY`
-- `TELEGRAM_BOT_TOKEN`
+Если ключ не добавлен или API не загрузился, приложение показывает безопасный fallback и список событий, а остальная часть приложения продолжает работать.
 
-Их добавляют в Cloudflare как Worker Secrets.
-
-## Быстрые команды
-
-```bash
-npm install
-npx wrangler login
-npx wrangler secret put SUPABASE_SECRET_KEY
-npx wrangler secret put TELEGRAM_BOT_TOKEN
-npm run check
-npm run deploy
-```
-
-До deploy сначала выполните `supabase/schema.sql` в Supabase SQL Editor.
-
-Полная инструкция: `DEPLOY-CLOUDFLARE-RU.md`.
+См. `V12-UPGRADE-RU.md`.
