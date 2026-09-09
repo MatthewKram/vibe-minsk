@@ -271,55 +271,66 @@ function topBar(sub='только Минск', back=false) {
   return `<div class="topbar top-space"><div class="brand-lockup">${back?`<button class="back-btn" data-back>${icon('back')}<span>Назад</span></button>`:`<button class="brand-core" data-nav="home" aria-label="V I B E"><span class="brand-v">V</span><span class="brand-word">I B E</span><em>MINSK</em></button>`}</div><div class="top-actions">${!back?`<button class="location-chip" data-action="geo">${icon('pin')}<strong>Минск</strong><small>локально</small></button>`:''}<button class="icon-btn top-notify" data-action="notifications">${icon('bell')}${unreadCount()?`<span class="notification-dot">${Math.min(9,unreadCount())}</span>`:''}</button></div></div>`;
 }
 function sectionTitle(title, sub='') { return `<div class="section-title"><div><h3>${title}</h3>${sub?`<small>${sub}</small>`:''}</div><span class="section-line"></span></div>`; }
-function authBanner() { return state.authError ? `<div class="notice auth-notice"><b>${state.publicOnly?'Режим просмотра':'Нужна настройка'}</b><div>${escapeHtml(state.authError)}</div></div>` : ''; }
+function authBanner() {
+  if (!state.authError) return '';
+  return `<div class="auth-ribbon ${state.publicOnly?'public':''}"><span>${icon(state.publicOnly?'user':'shield')}</span><div><b>${state.publicOnly?'Просмотр без входа':'Проверь подключение'}</b><small>${escapeHtml(state.authError)}</small></div>${state.publicOnly?`<button data-action="open-telegram">Открыть в Telegram</button>`:''}</div>`;
+}
 function loadingBlock(text='Загрузка…') { return `<div class="empty"><div class="spinner">✦</div><b>${escapeHtml(text)}</b><div>Получаем данные из общей базы.</div></div>`; }
 
 function eventCard(e) {
   const dist = eventDistance(e);
-  const fill = Math.min(100,Math.round((e.people/Math.max(1,e.capacity))*100));
   const spots = Math.max(0,e.capacity-e.people);
-  const urgency = spots <= 3 ? 'Последние места' : spots <= 8 ? `${spots} мест` : `${e.people} уже идут`;
   const host = e.organizer?.name || 'Организатор';
-  return `<article class="event-card premium-card" data-event="${e.id}">
-    <div class="event-art" style="${eventCoverStyle(e)}"><div class="poster-noise"></div><div class="event-badges"><span class="badge live">${kindIcon(e.kind)} ${escapeHtml(e.vibe||'СОБЫТИЕ')}</span>${e.owner?'<span class="badge owner">МОЁ</span>':''}</div>${e.coverUrl?'':`<div class="art-signature">${kindIcon(e.kind,'hero-glyph')}<span>${escapeHtml(kindLabel(e.kind)).toUpperCase()}</span></div>`}<button class="heart-btn ${e.favorite?'active':''}" data-favorite="${e.id}">${icon('heart')}</button><div class="poster-footer"><span>${escapeHtml(e.district)}</span><strong>${escapeHtml(urgency)}</strong></div></div>
-    <div class="event-info"><div class="eyebrow-row"><span>${formatDate(e.startAt)}</span><span>${formatPrice(e.price)}</span></div><h3>${escapeHtml(e.title)}</h3><div class="host-mini"><div class="micro-avatar">${e.organizer?.avatarUrl?`<img src="${escapeHtml(e.organizer.avatarUrl)}" alt="">`:initials(host)}</div><span>${escapeHtml(host)}</span>${e.organizer?.verified?'<i>✓</i>':''}</div><div class="event-bottom"><div class="capacity-wrap"><div class="capacity-line compact"><i style="width:${fill}%"></i></div><small>${e.people}/${e.capacity} · ${spots?`${spots} свободно`:'мест нет'}</small></div><span class="distance-pill">${dist!=null?`${dist.toFixed(1)} км`:'Минск'}</span></div></div>
+  const time = formatTime(e.startAt);
+  return `<article class="event-card v9-card" data-event="${e.id}">
+    <div class="event-art v9-art" style="${eventCoverStyle(e)}">
+      <div class="v9-cover-scrim"></div>
+      <div class="v9-topline"><span class="v9-type">${kindIcon(e.kind)} ${escapeHtml(kindLabel(e.kind))}</span><button class="heart-btn ${e.favorite?'active':''}" data-favorite="${e.id}">${icon('heart')}</button></div>
+      <div class="v9-cover-copy"><small>${escapeHtml(e.district)} · ${time}</small><h3>${escapeHtml(e.title)}</h3><div><span>${formatPrice(e.price)}</span><span>${spots?`${spots} мест`:'мест нет'}</span></div></div>
+    </div>
+    <div class="v9-card-meta"><div class="host-mini"><div class="micro-avatar">${e.organizer?.avatarUrl?`<img src="${escapeHtml(e.organizer.avatarUrl)}" alt="">`:initials(host)}</div><div><b>${escapeHtml(host)}</b><small>${e.organizer?.verified?'подтверждённый организатор':'организатор'}</small></div></div><span class="distance-pill">${dist!=null?`${dist.toFixed(1)} км`:'Минск'}</span></div>
   </article>`;
 }
 function listCard(e) {
   const spots=Math.max(0,e.capacity-e.people);
-  return `<button class="list-card premium-list" data-event="${e.id}"><div class="list-preview" style="${eventCoverStyle(e)}">${e.coverUrl?'':`<span class="mini-art">${kindIcon(e.kind)}</span>`}</div><div class="list-copy"><small>${escapeHtml(e.district)} · ${formatDate(e.startAt)}</small><b>${escapeHtml(e.title)}</b><p>${escapeHtml((e.tags||[]).slice(0,3).join(' · ')||kindLabel(e.kind))}</p></div><div class="list-side"><b>${formatPrice(e.price)}</b><small class="${spots<=3?'hot-text':''}">${spots?`${spots} мест`:'полный'}</small>${icon('arrow')}</div></button>`;
+  return `<button class="list-card v9-list" data-event="${e.id}"><div class="list-preview" style="${eventCoverStyle(e)}"></div><div class="list-copy"><small>${escapeHtml(e.district)} · ${formatTime(e.startAt)}</small><b>${escapeHtml(e.title)}</b><p>${escapeHtml((e.tags||[]).slice(0,2).join(' · ')||kindLabel(e.kind))}</p></div><div class="list-side"><b>${formatPrice(e.price)}</b><small class="${spots<=3?'hot-text':''}">${spots?`${spots} мест`:'полный'}</small></div></button>`;
 }
-
+function liveNowCard(e) {
+  const diffMin = Math.round((new Date(e.startAt).getTime()-Date.now())/60000);
+  const when = diffMin <= 15 ? 'уже собираются' : diffMin < 60 ? `через ${Math.max(1,diffMin)} мин` : formatTime(e.startAt);
+  return `<button class="live-now-card" data-event="${e.id}"><div class="live-now-media" style="${eventCoverStyle(e)}"><span class="live-pill">LIVE</span></div><div><small>${escapeHtml(e.district)} · ${when}</small><b>${escapeHtml(e.title)}</b><span>${e.people} идут · ${Math.max(0,e.capacity-e.people)} мест</span></div></button>`;
+}
+function personNearCard(e, i=0) {
+  const name=e.organizer?.name||['Аня','Илья','Маша','Макс'][i%4];
+  const intent=e.kind==='bar'?'Ищет компанию в бар':e.kind==='home'?'Собирает камерный вечер':e.kind==='music'?'Идёт на музыку':'Ищет компанию на вечер';
+  return `<button class="person-near" data-user="${e.organizer?.id||''}"><div class="person-photo">${e.organizer?.avatarUrl?`<img src="${escapeHtml(e.organizer.avatarUrl)}" alt="">`:initials(name)}</div><div><b>${escapeHtml(name)}</b><small>${escapeHtml(e.district)}</small><p>${intent}</p></div><span>${icon('arrow')}</span></button>`;
+}
 function homeScreen() {
   const events = filteredEvents();
   const name = state.user?.firstName || state.tgUser?.first_name || 'Гость';
   const now=Date.now();
-  const live=events.filter(e=>Math.abs(new Date(e.startAt)-now)<5*3600000).slice(0,5);
-  const lastSpots=events.filter(e=>e.capacity-e.people>0&&e.capacity-e.people<=5).slice(0,6);
-  const free=events.filter(e=>Number(e.price)===0).slice(0,6);
-  const curated=events.slice(0,3);
+  const live=events.filter(e=>{const d=new Date(e.startAt).getTime()-now;return d>-60*60000&&d<4*3600000}).slice(0,5);
+  const lastSpots=events.filter(e=>e.capacity-e.people>0&&e.capacity-e.people<=5).slice(0,5);
+  const free=events.filter(e=>Number(e.price)===0).slice(0,5);
+  const feature=events[0];
+  const secondary=events.slice(1,5);
+  const peopleSource=(events.filter(e=>e.organizer).slice(0,4));
   const districts = Object.keys(DISTRICTS).slice(0,6);
-  return `<section class="screen home-v7">${topBar('Минск')}${authBanner()}
-    <section class="hero-v7"><div class="hero-copy"><div class="live-kicker"><span></span> Сегодня в Минске</div><h1>Куда<br><em>сегодня?</em></h1><p>${escapeHtml(name)}, от камерных встреч до больших ночей — всё, что происходит рядом.</p><div class="hero-actions"><button class="primary-btn glow" data-action="random">${icon('spark')} Выбрать за меня</button><button class="round-action" data-nav="map">${icon('map')}</button></div></div><div class="hero-orbit"><div class="orb-ring r1"></div><div class="orb-ring r2"></div><div class="hero-orb"><span>${events.length}</span><small>событий</small></div><div class="orbit-chip c1">LIVE</div><div class="orbit-chip c2">${events.length} событий</div></div></section>
-    <section class="pulse-strip"><div class="pulse-copy"><span class="pulse-dot"></span><div><b>Пульс города</b><small>${live.length?`${live.length} событий в ближайшие часы`:'вечер только начинается'}</small></div></div><div class="pulse-people">${(live.length?live:events).slice(0,4).map(e=>`<span title="${escapeHtml(e.title)}">${e.organizer?.avatarUrl?`<img src="${escapeHtml(e.organizer.avatarUrl)}" alt="">`:initials(e.organizer?.name||e.title)}</span>`).join('')}<b>LIVE</b></div></section>
-    <div class="search-v7"><span>${icon('search')}</span><input id="searchInput" value="${escapeHtml(state.query)}" placeholder="Что ищем сегодня?"><button data-action="search">${icon('arrow')}</button></div>
-    <div class="time-tabs premium-tabs">${['Сейчас','Сегодня','Завтра','Выходные','Все'].map(x=>`<button class="tab-chip ${state.timeFilter===x?'active':''}" data-time="${x}">${x}</button>`).join('')}</div>
-    <section class="section">${sectionTitle('Настроение','выбери вайб')}<div class="vibe-categories">${Object.entries(KIND_META).map(([k,[emoji,label]])=>`<button class="vibe-category ${state.kindFilter===k?'active':''}" data-kind="${k}"><span>${kindIcon(k)}</span><b>${label}</b></button>`).join('')}</div></section>
-    ${curated.length?`<section class="section">${sectionTitle('Выбор V I B E','то, что стоит открыть')}<div class="editorial-grid">${curated.map((e,i)=>`<button class="editorial-card e${i+1}" data-event="${e.id}" style="${eventCoverStyle(e)}"><span>${String(i+1).padStart(2,'0')}</span><div><small>${escapeHtml(e.district)} · ${formatTime(e.startAt)}</small><b>${escapeHtml(e.title)}</b><em>${formatPrice(e.price)}</em></div></button>`).join('')}</div></section>`:''}
-    <section class="section">${sectionTitle('Горит сейчас',events.length?`${events.length} вариантов`:'пока тихо')}<div class="event-strip">${events.slice(0,8).map(eventCard).join('') || empty('', 'По этим фильтрам тихо','Попробуйте другой формат или время.')}</div></section>
-    ${lastSpots.length?`<section class="section">${sectionTitle('Последние места','успей вписаться')}<div class="stack">${lastSpots.map(listCard).join('')}</div></section>`:''}
-    ${free.length?`<section class="section">${sectionTitle('Бесплатно сегодня','без бюджета — не без планов')}<div class="event-strip compact-strip">${free.map(eventCard).join('')}</div></section>`:''}
-    <section class="section">${sectionTitle('Районы','куда тянет сегодня')}<div class="district-grid v7">${districts.map((d,i)=>`<button class="district-card" data-district="${d}"><span>0${i+1}</span><b>${d}</b><small>${state.events.filter(e=>e.district===d&&e.status==='published').length} событий</small></button>`).join('')}</div></section>
-    <section class="section filters-v7">${sectionTitle('Точный поиск','подстрой выдачу')}<div class="filter-bar"><select id="districtFilter"><option value="all">Все районы</option>${Object.keys(DISTRICTS).map(d=>`<option ${state.districtFilter===d?'selected':''}>${d}</option>`).join('')}</select><select id="priceFilter"><option value="all" ${state.priceFilter==='all'?'selected':''}>Любая цена</option><option value="free" ${state.priceFilter==='free'?'selected':''}>Бесплатно</option><option value="paid" ${state.priceFilter==='paid'?'selected':''}>Платно</option></select><label class="range-label">до ${state.radius} км<input id="radiusFilter" type="range" min="2" max="32" value="${state.radius}"></label></div></section>
-    <section class="section">${sectionTitle('Вся лента','по времени')}<div class="stack">${events.map(listCard).join('')}</div></section>
+  const categories=Object.entries(KIND_META).filter(([k])=>k!=='all');
+  return `<section class="screen home-v9">${topBar('Минск')}${authBanner()}
+    <section class="v9-intro"><div><div class="v9-date"><i></i> Сегодня · Минск</div><h1>Твой вечер<br>начинается <em>здесь.</em></h1><p>${escapeHtml(name)}, собрали живые планы рядом — без бесконечного каталога.</p></div><button class="v9-surprise" data-action="random">${icon('spark')}<span>Подбери мне</span></button></section>
+    ${feature?`<section class="v9-feature" data-event="${feature.id}" style="${eventCoverStyle(feature)}"><div class="v9-feature-shade"></div><div class="v9-feature-top"><span>${kindIcon(feature.kind)} ${escapeHtml(kindLabel(feature.kind))}</span><button data-favorite="${feature.id}" class="heart-btn ${feature.favorite?'active':''}">${icon('heart')}</button></div><div class="v9-feature-copy"><small>${escapeHtml(feature.district)} · ${formatTime(feature.startAt)}</small><h2>${escapeHtml(feature.title)}</h2><p>${escapeHtml((feature.tags||[]).slice(0,3).join(' · ')||feature.desc||'Сегодня в Минске')}</p><div><b>${formatPrice(feature.price)}</b><span>${Math.max(0,feature.capacity-feature.people)} мест</span><span>${feature.people} идут</span></div></div></section>`:''}
+    <div class="search-v9"><span>${icon('search')}</span><input id="searchInput" value="${escapeHtml(state.query)}" placeholder="Событие, район или настроение"><button data-action="search">${icon('arrow')}</button></div>
+    <div class="time-tabs v9-tabs">${['Сейчас','Сегодня','Завтра','Выходные','Все'].map(x=>`<button class="tab-chip ${state.timeFilter===x?'active':''}" data-time="${x}">${x}</button>`).join('')}</div>
+    ${live.length?`<section class="section v9-section">${sectionTitle('Прямо сейчас','город уже в движении')}<div class="live-now-strip">${live.map(liveNowCard).join('')}</div></section>`:''}
+    <section class="section v9-section">${sectionTitle('По настроению','быстрый вход')}<div class="v9-category-strip">${categories.map(([k,[emoji,label]],i)=>`<button class="v9-category cat-${i+1} ${state.kindFilter===k?'active':''}" data-kind="${k}"><span>${kindIcon(k)}</span><b>${label}</b><small>${state.events.filter(e=>e.kind===k&&e.status==='published').length} рядом</small></button>`).join('')}</div></section>
+    ${secondary.length?`<section class="section v9-section">${sectionTitle('На вечер','подборка V I B E')}<div class="event-strip v9-event-strip">${secondary.map(eventCard).join('')}</div></section>`:''}
+    ${peopleSource.length?`<section class="section v9-section">${sectionTitle('Люди рядом','ищут компанию и планы')}<div class="people-near-strip">${peopleSource.map(personNearCard).join('')}</div></section>`:''}
+    ${lastSpots.length?`<section class="section v9-section">${sectionTitle('Последние места','если хочется решить сейчас')}<div class="stack v9-stack">${lastSpots.map(listCard).join('')}</div></section>`:''}
+    ${free.length?`<section class="section v9-section">${sectionTitle('Без бюджета','бесплатно сегодня')}<div class="event-strip v9-event-strip compact-strip">${free.map(eventCard).join('')}</div></section>`:''}
+    <section class="section v9-section">${sectionTitle('По районам','быстрее найти своё')}<div class="v9-district-strip">${districts.map(d=>`<button data-district="${d}"><b>${d}</b><span>${state.events.filter(e=>e.district===d&&e.status==='published').length}</span></button>`).join('')}</div></section>
   </section>`;
 }
-
-function mapScreen() {
-  const events = filteredEvents();
-  return `<section class="screen map-screen-v7">${topBar('карта Минска')}<div class="map-title"><div><div class="live-kicker"><span></span> ${events.length} точек</div><h1>Город<br>в движении</h1></div><button class="round-action" data-action="geo">${icon('pin')}</button></div><div class="map-controls">${Object.entries(KIND_META).map(([k,v])=>`<button class="filter-chip ${state.kindFilter===k?'active':''}" data-kind="${k}">${kindIcon(k)} ${v[1]}</button>`).join('')}</div><div class="map-wrap v7"><div id="map"></div><div class="map-fade"></div></div><div class="map-panel premium-panel"><div class="panel-label">Рядом с тобой</div><div class="mini-list">${events.slice(0,6).map(e=>`<button data-event="${e.id}"><span class="map-event-icon">${kindIcon(e.kind)}</span><div><b>${escapeHtml(e.title)}</b><small>${escapeHtml(e.district)} · ${formatDate(e.startAt)}</small></div><i>${formatPrice(e.price)}</i></button>`).join('')}</div></div></section>`;
-}
-
 function eventScreen(id) {
   const e = state.events.find(x=>x.id===id) || state.myEvents.find(x=>x.id===id);
   if (!e) return `<section class="screen">${topBar('событие',true)}${loadingBlock('Открываем событие…')}</section>`;
